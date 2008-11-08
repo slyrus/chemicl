@@ -7,12 +7,11 @@
                (read vers))
   :licence "BSD"
   :description "A library for representing chemical structures"
-  :depends-on (cxml cxml-stp)
+  :depends-on (cxml cxml-stp epigraph)
   :components
   ((:static-file "version" :pathname #p"version.lisp-expr")
    (:cl-source-file "package")
-   (:cl-source-file "graph" :depends-on (package))
-   (:cl-source-file "chemicl" :depends-on (package graph))
+   (:cl-source-file "chemicl" :depends-on (package))
    (:static-file "COPYRIGHT")
    (:static-file "README")
    (:static-file "make-dist" :pathname #.(make-pathname :name "make-dist" :type "sh"))))

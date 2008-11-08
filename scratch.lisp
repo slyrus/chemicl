@@ -66,7 +66,7 @@
 (add-edge *cyclohexane* *c4* *c5*)
 (add-edge *cyclohexane* *c5* *c6*)
 (add-edge *cyclohexane* *c6* *c1*)
-
+ 
 ;;; new stuff
 
 (defparameter *graph* (make-instance 'edge-list-graph))
@@ -121,4 +121,30 @@
 	 (add-edge-between-vertexes g source target))
     g))
 
+(defparameter *cyclohexane*
+  (make-molecule :name "cyclohexane"))
+(defparameter *c1* (make-atom :atomic-number 6 :name "C1"))
+(add-edge *cyclohexane* *c1* *c2*)
+
+(defparameter *methane*
+  (let ((mol (make-molecule :name "methane")))
+    (let ((c1 (make-atom :c :name "C1")))
+      (add-edge mol c1 (make-atom :h :name "H1"))
+      (add-edge mol c1 (make-atom :h :name "H2"))
+      (add-edge mol c1 (make-atom :h :name "H3"))
+      (add-edge mol c1 (make-atom :h :name "H4")))
+    mol))
+
+(defparameter *ethane*
+  (let ((mol (make-molecule :name "ethane")))
+    (let ((c1 (make-atom :c :name "C1"))
+          (c2 (make-atom :c :name "C2")))
+      (add-edge mol c1 c2)
+      (add-edge mol c1 (make-atom :h :name "H1"))
+      (add-edge mol c1 (make-atom :h :name "H2"))
+      (add-edge mol c1 (make-atom :h :name "H3"))
+      (add-edge mol c2 (make-atom :h :name "H4"))
+      (add-edge mol c2 (make-atom :h :name "H5"))
+      (add-edge mol c2 (make-atom :h :name "H6")))
+    mol))
 

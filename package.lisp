@@ -34,5 +34,5 @@
   (:shadow #:atom)
   (:nicknames #:chem)
   (:export #:atom)
-  (:use #:cl))
+  (:use #:cl #:epigraph))
 
