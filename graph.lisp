@@ -62,6 +62,10 @@
   (:documentation "Returns the edge that connects node1 and node2 in
   graph if the edge is present in the graph, otherwise returns NIL."))
 
+(defgeneric graph-edges (graph)
+  (:documentation "Returns the edges of graph-edges. Currently the
+  format in which the edges are returned is not specified."))
+
 (defgeneric find-edges-from (graph node)
   (:documentation "Returns a list of the edges in graph that begin
   with node."))
