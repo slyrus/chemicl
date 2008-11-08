@@ -61,9 +61,15 @@
   instances, each of whose element slots would contain the (same)
   element instance for the hydrogen."))
 
+(defparameter *atom-print-verbosity* 0)
+
 (defmethod print-object ((object atom) stream)
   (print-unreadable-object (object stream :type t :identity t)
-    (format stream "~S ~S" (node-name object) (element object))))
+    (format stream "~S ~S" 
+            (if (> *atom-print-verbosity* 0)
+                (element object)
+                (id (element object)))
+            (node-name object))))
 
 (defmethod mass ((atom atom))
   (mass (element atom)))

@@ -74,21 +74,21 @@
   (:documentation "Returns a list of the edges in graph that start or
   end with node."))
 
-(defgeneric bfs (graph start-node query-node)
+(defgeneric bfs (graph start end)
   (:documentation "Performs a breadth-first-search on graph starting
-  at start-node and returns a path query-node if query-node is
-  reachable from start-node, otherwise returns NIL."))
+  at start and returns a path end if end is
+  reachable from start, otherwise returns NIL."))
 
-(defgeneric dfs (graph start-node query-node)
+(defgeneric dfs (graph start end)
   (:documentation "Performs a depth-first-search on graph starting
-  at start-node and returns a path query-node if query-node is
-  reachable from start-node, otherwise returns NIL."))
+  at start and returns a path end if end is
+  reachable from start, otherwise returns NIL."))
 
 ;; note that saved the path in bfs results in possible quadratic
 ;; storage for bfs. There's probably a better way to do this. The
 ;; good news is that the path can't be longer than the number of
 ;; nodes, so it doesn't require exponential storage.
-(defmethod bfs ((graph graph) start-node query-node)
+(defmethod bfs ((graph graph) start end)
   (let (visited)
     (labels
         ((bfs-visit (node-set-list)
@@ -97,7 +97,7 @@
                   (lambda (node-and-path)
                     (destructuring-bind (node . path)
                         node-and-path
-                      (when (eq node query-node)
+                      (when (eq node end)
                         (return-from bfs
                           (nreverse (cons node path))))
                       (push node visited)
@@ -111,9 +111,9 @@
                   node-set-list)
              (when children
                (bfs-visit children)))))
-      (bfs-visit (list (cons start-node nil))))))
+      (bfs-visit (list (cons start nil))))))
 
-(defmethod bfs-map ((graph graph) start-node fn)
+(defmethod bfs-map ((graph graph) start fn &key end)
   (let (visited)
     (labels
         ((bfs-visit (node-list)
@@ -121,6 +121,9 @@
              (map nil
                   (lambda (node)
                     (funcall fn node)
+                    (when (and end
+                             (eq node end))
+                      (return-from bfs-map))
                     (push node visited)
                     (let ((edges (find-edges-containing graph node)))
                       (let ((neighbors (map (type-of edges) #'cdr edges)))
@@ -132,12 +135,12 @@
                   node-list)
              (when children
                (bfs-visit children)))))
-      (bfs-visit (list start-node)))))
+      (bfs-visit (list start)))))
 
-(defmethod dfs ((graph graph) start-node query-node)
-  (let ((visited (list start-node)))
+(defmethod dfs ((graph graph) start end)
+  (let ((visited (list start)))
     (labels ((dfs-visit (node path)
-               (if (eq node query-node)
+               (if (eq node end)
                    (return-from dfs (nreverse (cons node path)))
                    (let ((edges (find-edges-containing graph node)))
                      (let ((neighbors (map (type-of edges) #'cdr edges)))
@@ -147,12 +150,15 @@
                                 (push x visited)
                                 (dfs-visit x (cons node path))))
                             neighbors))))))
-      (dfs-visit start-node nil))))
+      (dfs-visit start nil))))
 
-(defmethod dfs-map ((graph graph) start-node fn)
-  (let ((visited (list start-node)))
+(defmethod dfs-map ((graph graph) start fn &key end)
+  (let ((visited (list start)))
     (labels ((dfs-visit (node path)
                (funcall fn node)
+               (when (and end
+                          (eq node end))
+                 (return-from dfs-map))
                (let ((edges (find-edges-containing graph node)))
                  (let ((neighbors (map (type-of edges) #'cdr edges)))
                    (map nil
@@ -161,15 +167,18 @@
                             (push x visited)
                             (dfs-visit x (cons node path))))
                         neighbors)))))
-      (dfs-visit start-node nil))))
+      (dfs-visit start nil))))
 
 
 ;;;
 ;;; edge list graph
 (defclass edge-list-graph (graph)
-  ((edges :accessor graph-edges :initarg :edges :initform nil))
+  ((edges :accessor graph-edge-list :initarg :edges :initform nil))
   (:documentation "A concrete subclass of graph that represents the
   edges in the graph with a list of edges between nodes."))
+
+(defmethod graph-edges ((graph edge-list-graph))
+  (graph-edge-list graph))
 
 (defmethod add-edge ((graph edge-list-graph) (node1 node) (node2 node))
   (pushnew node1 (graph-nodes graph))
