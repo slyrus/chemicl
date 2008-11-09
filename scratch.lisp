@@ -137,14 +137,14 @@
 
 (defparameter *ethane*
   (let ((mol (make-molecule :name "ethane")))
-    (let ((c1 (make-atom :c :name "C1"))
-          (c2 (make-atom :c :name "C2")))
-      (add-edge mol c1 c2)
-      (add-edge mol c1 (make-atom :h :name "H1"))
-      (add-edge mol c1 (make-atom :h :name "H2"))
-      (add-edge mol c1 (make-atom :h :name "H3"))
-      (add-edge mol c2 (make-atom :h :name "H4"))
-      (add-edge mol c2 (make-atom :h :name "H5"))
-      (add-edge mol c2 (make-atom :h :name "H6")))
+    (let ((c1 (add-atom mol :c "C1"))
+          (c2 (add-atom mol :c "C2")))
+      (add-bond mol "C1" "C2")
+      (add-bond mol "C1" (add-atom mol :h "H1"))
+      (add-bond mol "C1" (add-atom mol :h "H2"))
+      (add-bond mol "C1" (add-atom mol :h "H3"))
+      (add-bond mol c2 (add-atom mol :h "H4"))
+      (add-bond mol c2 (add-atom mol :h "H5"))
+      (add-bond mol c2 (add-atom mol :h "H6")))
     mol))
 

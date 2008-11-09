@@ -1,4 +1,4 @@
-;;; file: defpackage.lisp
+;;; file: package.lisp
 ;;;
 ;;; Copyright (c) 2008 Cyrus Harmon (ch-lisp@bobobeach.com)
 ;;; All rights reserved.
@@ -33,6 +33,8 @@
 (defpackage #:chemicl
   (:shadow #:atom)
   (:nicknames #:chem)
-  (:export #:atom)
+  (:export #:element
+           #:atom
+           #:molecule)
   (:use #:cl #:epigraph))
 

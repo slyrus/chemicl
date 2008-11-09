@@ -55,22 +55,27 @@
             (mass object))))
 
 (defclass atom (node)
-  ((element :initarg :element :accessor element :initform nil))
+  ((element :initarg :element :accessor element :initform nil)
+   (molecule :initarg :molecule :accessor molecule :initform nil))
   (:documentation "A class for representing individual atoms. For
   example, a molecule of hydrogen class would contain two atom
   instances, each of whose element slots would contain the (same)
-  element instance for the hydrogen."))
+  element instance for the hydrogen. An atom can be associated with at
+  most one molecule at a time, as sepcified by its molecule slot,
+  which can be NIL, indicating that the atom is not associated with
+  any molecule."))
 
 (defparameter *atom-print-verbosity* 0)
-
-
 
 (defmethod print-object ((object atom) stream)
   (print-unreadable-object (object stream :type t :identity t)
     (format stream "~S ~S" 
-            (if (> *atom-print-verbosity* 0)
-                (element object)
-                (id (element object)))
+            (if (slot-boundp object 'element)
+                (when (element object)
+                  (if (> *atom-print-verbosity* 0)
+                      (element object)
+                      (id (element object))))
+                "Element: unbound")
             (node-name object))))
 
 (defmethod mass ((atom atom))
@@ -80,6 +85,24 @@
   ((name :initarg :name :accessor name)
    (node-class :initform 'atom))
   (:documentation "A class for representing molecules."))
+
+(defmethod add-atom ((molecule molecule) identifier name)
+  (let ((atom (make-atom identifier :name name :molecule molecule)))
+    (push atom (graph-nodes molecule))
+    atom))
+
+(defun find-atom (molecule atom-identifier)
+  (typecase atom-identifier
+    (atom atom-identifier)
+    (string (find atom-identifier
+                  (graph-nodes molecule)
+                  :key 'node-name
+                  :test 'equal))))
+
+(defmethod add-bond ((molecule molecule) atom-identifier-1 atom-identifier-2)
+  (let ((atom-1 (find-atom molecule atom-identifier-1))
+        (atom-2 (find-atom molecule atom-identifier-2)))
+    (add-edge molecule atom-1 atom-2)))
 
 ;;; B (3), C (4), N (3,5), O (2), P (3,5), S (2,4,6), and 1 for the
 ;;; halogens
@@ -190,10 +213,6 @@ string, gets the element whose symbol is identifier."
          'atom
          :element (get-element identifier)
          args))
-
-(defun make-element-vertex (id)
-  (let ((element (find id *elements* :key #'id :test #'string-equal)))
-    (make-instance 'element-vertex :vertex-element element)))
 
 (defmethod mass ((molecule molecule))
   (let ((mass 0.0d0))

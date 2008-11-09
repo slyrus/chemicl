@@ -1,2 +1,13 @@
 
-cl-chem
+chemicl is a common lisp library for representing and manipulating
+chemical entities and concepts such as molecules, atoms, elements,
+etc...
+
+The git repository will (one day) be found at:
+
+http://git.cyrusharmon.org/cgi-bin/gitweb.cgi?p=retrospectiff.git
+
+There is currently no documentation, no website and no examples.
+
+
+
