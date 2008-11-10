@@ -10,6 +10,7 @@ elements, etc...  nodges and edges.")
  
  (:span
   (:title "chemicl")
+  (:h1 "Examples")
   (:h1 "Dictionary")
   (:h2 "Element")
   (:h2 "Atom")

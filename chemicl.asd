@@ -13,6 +13,7 @@
    (:cl-source-file "package")
    (:cl-source-file "chemicl" :depends-on (package))
    (:static-file "COPYRIGHT")
+   (:static-file "elementdata.xml")
    (:static-file "README")
    (:static-file "make-dist" :pathname #.(make-pathname :name "make-dist" :type "sh"))))
 

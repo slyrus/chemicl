@@ -88,16 +88,13 @@
 
 (defmethod add-atom ((molecule molecule) identifier name)
   (let ((atom (make-atom identifier :name name :molecule molecule)))
-    (push atom (graph-nodes molecule))
+    (add-node molecule atom)
     atom))
 
 (defun find-atom (molecule atom-identifier)
   (typecase atom-identifier
     (atom atom-identifier)
-    (string (find atom-identifier
-                  (graph-nodes molecule)
-                  :key 'node-name
-                  :test 'equal))))
+    (string (get-node molecule atom-identifier))))
 
 (defmethod add-bond ((molecule molecule) atom-identifier-1 atom-identifier-2)
   (let ((atom-1 (find-atom molecule atom-identifier-1))
@@ -117,7 +114,12 @@
 (defvar *elements*)
 
 (defparameter *element-nodes*
-    (cxml:parse-file "elementdata.xml" (stp:make-builder)))
+    (cxml:parse-file 
+     (asdf:component-pathname
+      (let ((path '("chemicl" "elementdata.xml")))
+        (reduce #'asdf:find-component (cdr path)
+                :initial-value (asdf:find-system (car path)))))
+     (stp:make-builder)))
 
 (defvar *element-hash* (make-hash-table :test 'equalp))
 
@@ -217,7 +219,7 @@ string, gets the element whose symbol is identifier."
 (defmethod mass ((molecule molecule))
   (let ((mass 0.0d0))
     (dfs-map molecule
-             (car (graph-nodes molecule))
+             (first-node molecule)
              (lambda (molecule)
                (incf mass (mass molecule))))
     mass))
