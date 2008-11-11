@@ -72,21 +72,29 @@
     g))
 
 (defparameter *cyclohexane*
-  (make-molecule :name "cyclohexane"))
-(defparameter *c1* (make-atom 6 :name "C1"))
-(defparameter *c2* (make-atom 6 :name "C2"))
-(defparameter *c3* (make-atom 6 :name "C3"))
-(defparameter *c4* (make-atom 6 :name "C4"))
-(defparameter *c5* (make-atom 6 :name "C5"))
-(defparameter *c6* (make-atom 6 :name "C6"))
+  (let ((mol (make-molecule :name "cyclohexane")))
+    (add-atom mol 6 "C1")
+    (add-atom mol 6 "C2")
+    (add-atom mol 6 "C3")
+    (add-atom mol 6 "C4")
+    (add-atom mol 6 "C5")
+    (add-atom mol 6 "C6")
+      
+    (loop for i from 1 to 12
+       do (add-atom mol 1 (format nil "H~A" i)))
+    (loop for i from 1 to 6
+       do (add-edge mol
+                    (format nil "C~A" (1+ (mod (1- i) 6)))
+                    (format nil "C~A" (1+ (mod i 6)))))
+    (loop for i from 1 to 6
+       do (add-edge mol
+                    (format nil "C~A" i)
+                    (format nil "H~A" (1+ (* (1- i) 2))))
+         (add-edge mol
+                   (format nil "C~A" i)
+                   (format nil "H~A" (+ (* (1- i) 2) 2))))
+    mol))
 
-(add-edge *cyclohexane* *c1* *c2*)
-(add-edge *cyclohexane* *c2* *c3*)
-(add-edge *cyclohexane* *c3* *c4*)
-(add-edge *cyclohexane* *c4* *c5*)
-(add-edge *cyclohexane* *c5* *c6*)
-(add-edge *cyclohexane* *c6* *c1*)
- 
 (defparameter *methane*
   (let ((mol (make-molecule :name "methane")))
     (let ((c1 (make-atom :c :name "C1")))
