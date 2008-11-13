@@ -34,7 +34,18 @@
   (:shadow #:atom)
   (:nicknames #:chem)
   (:export #:element
+           #:get-element
+
            #:atom
-           #:molecule)
+           #:make-atom
+
+           #:molecule
+           #:make-molecule
+           #:add-atom
+           #:find-atom
+           #:add-bond
+           
+           #:get-normal-valence
+           #:mass)
   (:use #:cl #:epigraph))
 
