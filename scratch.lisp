@@ -71,6 +71,29 @@
 	 (add-edge-between-vertexes g source target))
     g))
 
+(defparameter *benzene*
+  (let ((mol (make-molecule :name "benzene")))
+    (loop for i from 1 to 6
+       do
+         (add-atom mol 6 (format nil "C~A" i))
+         (add-atom mol 1 (format nil "H~A" i)))
+    (loop for i from 1 to 6
+       do
+         (add-bond mol
+                   (format nil "C~A" (1+ (mod (1- i) 6)))
+                   (format nil "C~A" (1+ (mod i 6)))
+                   :type :aromatic
+                   :order 1.5)
+         (add-bond mol
+                   (format nil "C~A" i)
+                   (format nil "H~A" i)))
+    mol))
+
+(find-atom *benzene* "C1")
+(find-edges-containing *benzene* (find-atom *benzene* "C1"))
+(atom-bond-order *benzene* "C1")
+(atom-bond-order *benzene* "H1")
+
 (defparameter *cyclohexane*
   (let ((mol (make-molecule :name "cyclohexane")))
     (add-atom mol 6 "C1")

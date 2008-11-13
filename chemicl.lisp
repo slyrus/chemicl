@@ -85,6 +85,8 @@
   ((name :initarg :name :accessor name))
   (:documentation "A class for representing molecules."))
 
+(defgeneric add-atom (molecule identifier name))
+
 (defmethod add-atom ((molecule molecule) identifier name)
   (let ((atom (make-atom identifier :name name :molecule molecule)))
     (add-node molecule atom)
@@ -96,16 +98,33 @@
     (string (get-node molecule atom-identifier))))
 
 (defclass bond (edge)
-  ((bond-type :accessor bond-type :initarg :bond-type :initform :single)))
+  ((type :accessor bond-type :initarg :type :initform :single)
+   (order :accessor bond-order :initarg :order :initform 1)))
+
+(defgeneric atom-bond-order (molecule atom))
+
+(defmethod atom-bond-order ((molecule molecule) (atom atom))
+  (let ((bonds (find-edges-containing molecule atom)))
+    (reduce #'+ bonds :key 'bond-order)))
+
+(defmethod atom-bond-order ((molecule molecule) atom-identifier)
+  (let ((atom (find-atom molecule atom-identifier)))
+    (when atom
+      (atom-bond-order molecule atom))))
+
+(defgeneric add-bond (molecule atom-identifier-1 atom-identifier-2
+                               &key type order))
 
 (defmethod add-bond ((molecule molecule) atom-identifier-1 atom-identifier-2
-                     &key (bond-type :single))
+                     &key (type :single) (order 1))
   (let ((atom-1 (find-atom molecule atom-identifier-1))
         (atom-2 (find-atom molecule atom-identifier-2)))
-    (let ((bond (make-instance 'bond
-                               :node1 atom-1
-                               :node2 atom-2
-                               :bond-type bond-type)))
+    (let ((bond (apply #'make-instance 'bond
+                       :node1 atom-1
+                       :node2 atom-2
+                       (append
+                        (when type `(:type ,type))
+                        (when order `(:order ,order))))))
       (add-edge molecule bond)
       bond)))
 
