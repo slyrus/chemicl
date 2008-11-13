@@ -81,9 +81,8 @@
 (defmethod mass ((atom atom))
   (mass (element atom)))
 
-(defclass molecule (edge-list-graph)
-  ((name :initarg :name :accessor name)
-   (node-class :initform 'atom))
+(defclass molecule (simple-edge-list-graph)
+  ((name :initarg :name :accessor name))
   (:documentation "A class for representing molecules."))
 
 (defmethod add-atom ((molecule molecule) identifier name)
@@ -96,10 +95,19 @@
     (atom atom-identifier)
     (string (get-node molecule atom-identifier))))
 
-(defmethod add-bond ((molecule molecule) atom-identifier-1 atom-identifier-2)
+(defclass bond (edge)
+  ((bond-type :accessor bond-type :initarg :bond-type :initform :single)))
+
+(defmethod add-bond ((molecule molecule) atom-identifier-1 atom-identifier-2
+                     &key (bond-type :single))
   (let ((atom-1 (find-atom molecule atom-identifier-1))
         (atom-2 (find-atom molecule atom-identifier-2)))
-    (add-edge molecule atom-1 atom-2)))
+    (let ((bond (make-instance 'bond
+                               :node1 atom-1
+                               :node2 atom-2
+                               :bond-type bond-type)))
+      (add-edge molecule bond)
+      bond)))
 
 ;;; B (3), C (4), N (3,5), O (2), P (3,5), S (2,4,6), and 1 for the
 ;;; halogens
@@ -223,3 +231,5 @@ string, gets the element whose symbol is identifier."
              (lambda (molecule)
                (incf mass (mass molecule))))
     mass))
+
+(defun smiles->molecule (string))
