@@ -83,14 +83,14 @@
     (loop for i from 1 to 12
        do (add-atom mol 1 (format nil "H~A" i)))
     (loop for i from 1 to 6
-       do (add-edge mol
+       do (add-bond mol
                     (format nil "C~A" (1+ (mod (1- i) 6)))
                     (format nil "C~A" (1+ (mod i 6)))))
     (loop for i from 1 to 6
-       do (add-edge mol
+       do (add-bond mol
                     (format nil "C~A" i)
                     (format nil "H~A" (1+ (* (1- i) 2))))
-         (add-edge mol
+         (add-bond mol
                    (format nil "C~A" i)
                    (format nil "H~A" (+ (* (1- i) 2) 2))))
     mol))
@@ -116,6 +116,4 @@
       (add-bond mol c2 (add-atom mol :h "H5"))
       (add-bond mol c2 (add-atom mol :h "H6")))
     mol))
-
-
 
