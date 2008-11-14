@@ -45,18 +45,18 @@
    (electronegativity :initarg :electronegativity :accessor electronegativity))
   (:documentation "A class for representing elements of the periodic table."))
 
+(defgeneric print-element-data (object stream)
+  (:method ((object element) stream)
+    (format stream "~S ~S"
+            (node1 object)
+            (node2 object))))
+
 (defmethod print-object ((object element) stream)
   (print-unreadable-object (object stream :type t :identity t)
-    (format stream
-            "~S ~S ~S ~S"
-            (atomic-number object)
-            (id object)
-            (name object)
-            (mass object))))
+    (print-element-data object stream)))
 
 (defclass atom (node)
-  ((element :initarg :element :accessor element :initform nil)
-   (molecule :initarg :molecule :accessor molecule :initform nil))
+  ((element :initarg :element :accessor element :initform nil))
   (:documentation "A class for representing individual atoms. For
   example, a molecule of hydrogen class would contain two atom
   instances, each of whose element slots would contain the (same)
@@ -85,21 +85,49 @@
   ((name :initarg :name :accessor name))
   (:documentation "A class for representing molecules."))
 
-(defgeneric add-atom (molecule identifier name))
+(defgeneric add-atom (molecule identifier name)
+  (:method ((molecule molecule) identifier name)
+    (let ((atom (make-atom identifier :name name)))
+      (add-node molecule atom)
+      atom)))
 
-(defmethod add-atom ((molecule molecule) identifier name)
-  (let ((atom (make-atom identifier :name name :molecule molecule)))
-    (add-node molecule atom)
-    atom))
+(defgeneric atom-count (molecule)
+  (:method ((molecule molecule))
+    (node-count molecule)))
 
 (defun find-atom (molecule atom-identifier)
   (typecase atom-identifier
     (atom atom-identifier)
     (string (get-node molecule atom-identifier))))
 
+(defparameter *bond-orders* 
+  '((:single . 1)
+    (:aromatic . 1.5)
+    (:double . 2)
+    (:triple . 3)))
+
+(defun get-bond-order-number (keyword-or-number)
+  (etypecase keyword-or-number
+    (keyword (cdr (assoc keyword-or-number *bond-orders*)))
+    (number (cdr (rassoc keyword-or-number *bond-orders*)))))
+
+(defun get-bond-order-keyword (keyword-or-number)
+  (etypecase keyword-or-number
+    (keyword (car (assoc keyword-or-number *bond-orders*)))
+    (number (car (rassoc keyword-or-number *bond-orders*)))))
+
 (defclass bond (edge)
   ((type :accessor bond-type :initarg :type :initform :single)
    (order :accessor bond-order :initarg :order :initform 1)))
+
+(defmethod print-edge-data :after ((object bond) stream)
+  (format stream " ~S ~S" 
+          (if (slot-boundp object 'type)
+              (bond-type object)
+              "Type: unbound")
+          (if (slot-boundp object 'order)
+              (bond-order object)
+              "Order: unbound")))
 
 (defgeneric atom-bond-order (molecule atom))
 
@@ -247,8 +275,110 @@ string, gets the element whose symbol is identifier."
   (let ((mass 0.0d0))
     (dfs-map molecule
              (first-node molecule)
-             (lambda (molecule)
-               (incf mass (mass molecule))))
+             (lambda (atom)
+               (incf mass (mass atom))))
     mass))
 
-(defun smiles->molecule (string))
+(defun smiles->molecule (string)
+  (let ((mol (make-instance 'molecule))
+        (atoms (make-hash-table :test 'equal))
+        (element-count (make-hash-table)))
+    (labels ((read-branch (stream)
+               (loop for token = (read-smiles-token stream)
+                  while (not (equal token #\)))
+                  collect token))
+             (read-number (stream)
+               (parse-integer
+                (coerce (loop for digit = (read-char stream)
+                           for next = (peek-char nil stream nil)
+                           collect digit
+                           while (and next (digit-char-p next)))
+                        'string)))
+             (peek-number (stream)
+               (let ((next (peek-char nil stream nil)))
+                 (when (and next (digit-char-p next))
+                   (read-number stream))))
+             (add-molecule-atom (element)
+               (let ((count
+                      (setf (gethash element element-count)
+                            (1+ (or (gethash element element-count) 0)))))
+                 (add-atom mol (id element)
+                           (format nil "~A~A" (id element) count))))
+             (read-smiles-token (stream)
+               (let ((number (peek-number stream)))
+                 (if number
+                     (print number)
+                     (let ((char (read-char stream nil nil)))
+                       (cond ((null char) nil) 
+                             ((eql char #\[)
+                              (make-atom (coerce (loop for c = (read-char stream)
+                                                    while (not (eql c #\]))
+                                                    collect c)
+                                                 'string)))
+                             ((eql char #\()
+                              (read-branch stream))
+                             ((eql char #\-)
+                              :double)
+                             ((eql char #\=)
+                              :double)
+                             ((eql char #\#)
+                              :triple)
+                             ((eql char #\:)
+                              :aromatic)
+                             ((eql char #\)) #\))
+                             ((eql char #\]) #\])
+                             (char
+                              (let ((element (get-element (string char)))
+                                    (number (peek-number stream)))
+                                (if number
+                                    (let* ((key (cons element number))
+                                           (lookup (gethash key atoms)))
+                                      (if lookup
+                                          lookup
+                                          (let ((atom (add-molecule-atom element)))
+                                            (setf (gethash key atoms) atom)
+                                            atom)))
+                                    (add-molecule-atom element))))))))))
+      (with-input-from-string (stream string)
+        (loop for token = (read-smiles-token stream)
+           with last
+           with bond-type = :single
+           while token
+           do
+             (case token 
+               ((:single
+                 :double
+                 :triple
+                 :aromatic)
+                (setf bond-type token))
+               (t 
+                (when last (add-bond mol last token
+                                     :type (get-bond-order-keyword bond-type)
+                                     :order (get-bond-order-number bond-type)))
+                (setf bond-type :single)
+                (setf last token))))))
+    mol))
+
+(defun add-hydrogens (molecule)
+  (let ((hydrogen-count 0)
+        (hydrogen (get-element 1)))
+    (dfs-map molecule (first-node molecule)
+             (lambda (atom)
+               (when (eq (element atom) hydrogen)
+                 (incf hydrogen-count))))
+    (dfs-map molecule
+             (first-node molecule)
+             (lambda (atom)
+               (let* ((order (atom-bond-order molecule atom))
+                      (normal-valence 
+                       (let ((normal-valence-list (get-normal-valence atom)))
+                         (find-if (lambda (x)
+                                    (>= x order))
+                                  normal-valence-list))))
+                 (when normal-valence
+                   (let ((count (- normal-valence order)))
+                     (dotimes (i (truncate count))
+                       (let ((h-atom (add-atom molecule 1 
+                                               (format nil "H~A" (incf hydrogen-count)))))
+                         (add-bond molecule atom h-atom)))))))))
+  molecule)
