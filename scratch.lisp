@@ -140,3 +140,6 @@
       (add-bond mol c2 (add-atom mol :h "H6")))
     mol))
 
+(defparameter *tamoxifen*
+  (parse-smiles-string "CCC(=C(C1=CC=CC=C1)C2=CC=C(C=C2)OCCN(C)C)C3=CC=CC=C3"))
+
