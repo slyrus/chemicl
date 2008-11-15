@@ -47,16 +47,20 @@
 
 (defgeneric print-element-data (object stream)
   (:method ((object element) stream)
-    (format stream "~S ~S"
-            (node1 object)
-            (node2 object))))
+    (format stream
+            "~S ~S ~S ~S"
+            (atomic-number object)
+            (id object)
+            (name object)
+            (mass object))))
 
 (defmethod print-object ((object element) stream)
   (print-unreadable-object (object stream :type t :identity t)
     (print-element-data object stream)))
 
 (defclass atom (node)
-  ((element :initarg :element :accessor element :initform nil))
+  ((element :initarg :element :accessor element :initform nil)
+   (isotope-mass :initarg :isotope-mass :accessor isotope-mass :initform nil))
   (:documentation "A class for representing individual atoms. For
   example, a molecule of hydrogen class would contain two atom
   instances, each of whose element slots would contain the (same)
@@ -64,6 +68,9 @@
   most one molecule at a time, as sepcified by its molecule slot,
   which can be NIL, indicating that the atom is not associated with
   any molecule."))
+
+;;; FIXME add a shared-initialize to initialize the exact atomic mass of the
+;;; atom etc... !!!
 
 (defparameter *atom-print-verbosity* 0)
 
@@ -79,6 +86,9 @@
             (node-name object))))
 
 (defmethod mass ((atom atom))
+  (mass (element atom)))
+
+(defmethod exact-mass ((atom atom))
   (mass (element atom)))
 
 (defclass molecule (simple-edge-list-graph)
@@ -279,17 +289,35 @@ string, gets the element whose symbol is identifier."
                (incf mass (mass atom))))
     mass))
 
+(defun count-element (molecule element-id)
+  (let ((element-count 0)
+        (element (get-element element-id)))
+    (dfs-map molecule (first-node molecule)
+             (lambda (atom)
+               (when (eq (element atom) element)
+                 (incf element-count))))
+    element-count))
+
+(defun count-elements (molecule)
+  (declare (optimize (debug 2)))
+   (let ((element-count-hash (make-hash-table)))
+    (dfs-map molecule (first-node molecule)
+             (lambda (atom)
+               (setf (gethash (element atom) element-count-hash)
+                     (1+ (or (gethash (element atom)
+                                      element-count-hash)
+                             0)))))
+    (let (l)
+      (maphash (lambda (k v)
+                 (push (cons k v) l))
+               element-count-hash)
+      (sort l #'< :key (lambda (x) (atomic-number (car x)))))))
+
 (defun add-hydrogens (molecule &optional exclude-list)
   "Adds hydrogens to atoms in a molecule such that each atom has the
 lowest normal valence consistent with the number of pre-existing bonds
 for that atom."
-  (let ((hydrogen-count 0)
-        (hydrogen (get-element 1)))
-    (dfs-map molecule (first-node molecule)
-             (lambda (atom)
-               (when (eq (element atom) hydrogen)
-                 (incf hydrogen-count))))
-    (print molecule)
+  (let ((hydrogen-count (count-element molecule "H")))
     (unless (member molecule exclude-list)
       (dfs-map molecule
                (first-node molecule)
@@ -324,6 +352,32 @@ of the MOLECULE class with the appropriate atoms and bonds."
                            collect digit
                            while (and next (digit-char-p next)))
                         'string)))             
+             (read-bracket-expression (stream)
+               (let (mass)
+                 (let ((char (peek-char nil stream)))
+                   (when (digit-char-p char)
+                     (setf mass (read-number stream)))
+                   (let ((atom (add-molecule-atom
+                                (get-element
+                                 (coerce
+                                  (loop for c = (read-char stream)
+                                     collect c 
+                                     while (alpha-char-p (peek-char nil stream)))
+                                  'string)))))
+                     (when mass (setf (isotope-mass atom) mass))
+                     (let ((char (peek-char nil stream)))
+                       (cond ((eq char #\]) (read-char stream))
+                             ((char-equal #\H)
+                              (read-char stream)
+                              (let ((count
+                                     (if (digit-char-p
+                                          (peek-char nil stream)) 
+                                         (read-number stream) 
+                                         1)))
+                                (dotimes (i count)
+                                  (let ((h (add-molecule-atom 1)))
+                                    (add-bond mol atom h)))))))
+                     (list (cons :explicit-atom atom))))))
              (add-molecule-atom (element)
                (let ((count (setf (gethash element element-count)
                                   (1+ (or (gethash element element-count) 0)))))
@@ -338,12 +392,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
                  (cond
                    ((null char) nil) 
                    ((eql char #\[)
-                    (list (cons :explicit-atom (add-molecule-atom
-                                                (get-element
-                                                 (coerce (loop for c = (read-char stream)
-                                                            while (not (eql c #\]))
-                                                            collect c)
-                                                         'string))))))
+                    (read-bracket-expression stream))
                    ((eql char #\()
                     (read-branch stream source))
                    ((eql char #\)) nil)
