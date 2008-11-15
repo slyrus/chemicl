@@ -279,10 +279,35 @@ string, gets the element whose symbol is identifier."
                (incf mass (mass atom))))
     mass))
 
-;;; it sort of works now, only i got the ring/opening closing thing
-;;; wrong. I assumed we were labeling atoms for then making bonds to
-;;; them later. instead, the digits designate ring
-;;; opening/closings. Fix this.
+(defun add-hydrogens (molecule &optional exclude-list)
+  "Adds hydrogens to atoms in a molecule such that each atom has the
+lowest normal valence consistent with the number of pre-existing bonds
+for that atom."
+  (let ((hydrogen-count 0)
+        (hydrogen (get-element 1)))
+    (dfs-map molecule (first-node molecule)
+             (lambda (atom)
+               (when (eq (element atom) hydrogen)
+                 (incf hydrogen-count))))
+    (print molecule)
+    (unless (member molecule exclude-list)
+      (dfs-map molecule
+               (first-node molecule)
+               (lambda (atom)
+                 (let* ((order (atom-bond-order molecule atom))
+                        (normal-valence 
+                         (let ((normal-valence-list (get-normal-valence atom)))
+                           (find-if (lambda (x)
+                                      (>= x order))
+                                    normal-valence-list))))
+                   (when normal-valence
+                     (let ((count (- normal-valence order)))
+                       (dotimes (i (truncate count))
+                         (let ((h-atom (add-atom molecule 1 
+                                                 (format nil "H~A" (incf hydrogen-count)))))
+                           (add-bond molecule atom h-atom))))))))))
+  molecule)
+
 (defun smiles->molecule (string &optional name)
   "Parses a SMILES description of a molecule and returns an instance
 of the MOLECULE class with the appropriate atoms and bonds."
@@ -290,7 +315,8 @@ of the MOLECULE class with the appropriate atoms and bonds."
   (let ((mol (apply #'make-instance 'molecule
                     (when name `(:name ,name))))
         (ring-openings (make-hash-table))
-        (element-count (make-hash-table)))
+        (element-count (make-hash-table))
+        (explicit-atoms))
     (labels ((read-number (stream)
                (parse-integer
                 (coerce (loop for digit = (read-char stream)
@@ -312,10 +338,12 @@ of the MOLECULE class with the appropriate atoms and bonds."
                  (cond
                    ((null char) nil) 
                    ((eql char #\[)
-                    (make-atom (coerce (loop for c = (read-char stream)
-                                          while (not (eql c #\]))
-                                          collect c)
-                                       'string)))
+                    (list (cons :explicit-atom (add-molecule-atom
+                                                (get-element
+                                                 (coerce (loop for c = (read-char stream)
+                                                            while (not (eql c #\]))
+                                                            collect c)
+                                                         'string))))))
                    ((eql char #\()
                     (read-branch stream source))
                    ((eql char #\)) nil)
@@ -335,8 +363,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
                                 (list (cons :ring number))))
                           (error "Coudln't read number!"))))
                    (char
-                    (let ((element (get-element (string char))))
-                      (list (cons :atom (add-molecule-atom element))))))))
+                    (list (cons :atom (add-molecule-atom (get-element (string char)))))))))
              (read-smiles-stream (stream &optional last)
                (loop for tokens = (read-smiles-tokens stream last)
                   with bond-type = :single
@@ -349,43 +376,22 @@ of the MOLECULE class with the appropriate atoms and bonds."
                            (let ((ring (cdr token)))
                              (if (numberp ring)
                                  (setf (gethash ring ring-openings) last)
-                                 (add-bond mol ring last
-                                           :type (get-bond-order-keyword bond-type)
-                                           :order (get-bond-order-number bond-type)))))
-                          (:atom
+                                 (progn
+                                   (add-bond mol ring last
+                                             :type (get-bond-order-keyword bond-type)
+                                             :order (get-bond-order-number bond-type))
+                                   (setf (gethash ring ring-openings) nil)))))
+                          ((:atom :explicit-atom)
                            (let ((atom (cdr token)))
                              (when last (add-bond mol last atom
                                                   :type (get-bond-order-keyword bond-type)
                                                   :order (get-bond-order-number bond-type)))
                              (setf bond-type :single)
-                             (setf last atom))))))))
+                             (setf last atom)
+                             (when (eql (car token) :explicit-atom)
+                               (push atom explicit-atoms)))))))))
       (with-input-from-string (stream string)
         (read-smiles-stream stream)))
+    (add-hydrogens mol explicit-atoms)
     mol))
 
-(defun add-hydrogens (molecule)
-  "Adds hydrogens to atoms in a molecule such that each atom has the
-lowest normal valence consistent with the number of pre-existing bonds
-for that atom."
-  (let ((hydrogen-count 0)
-        (hydrogen (get-element 1)))
-    (dfs-map molecule (first-node molecule)
-             (lambda (atom)
-               (when (eq (element atom) hydrogen)
-                 (incf hydrogen-count))))
-    (dfs-map molecule
-             (first-node molecule)
-             (lambda (atom)
-               (let* ((order (atom-bond-order molecule atom))
-                      (normal-valence 
-                       (let ((normal-valence-list (get-normal-valence atom)))
-                         (find-if (lambda (x)
-                                    (>= x order))
-                                  normal-valence-list))))
-                 (when normal-valence
-                   (let ((count (- normal-valence order)))
-                     (dotimes (i (truncate count))
-                       (let ((h-atom (add-atom molecule 1 
-                                               (format nil "H~A" (incf hydrogen-count)))))
-                         (add-bond molecule atom h-atom)))))))))
-  molecule)
