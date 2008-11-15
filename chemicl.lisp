@@ -279,87 +279,94 @@ string, gets the element whose symbol is identifier."
                (incf mass (mass atom))))
     mass))
 
-(defun smiles->molecule (string)
-  (let ((mol (make-instance 'molecule))
-        (atoms (make-hash-table :test 'equal))
+;;; it sort of works now, only i got the ring/opening closing thing
+;;; wrong. I assumed we were labeling atoms for then making bonds to
+;;; them later. instead, the digits designate ring
+;;; opening/closings. Fix this.
+(defun smiles->molecule (string &optional name)
+  "Parses a SMILES description of a molecule and returns an instance
+of the MOLECULE class with the appropriate atoms and bonds."
+  (declare (optimize (debug 3)))
+  (let ((mol (apply #'make-instance 'molecule
+                    (when name `(:name ,name))))
+        (ring-openings (make-hash-table))
         (element-count (make-hash-table)))
-    (labels ((read-branch (stream)
-               (loop for token = (read-smiles-token stream)
-                  while (not (equal token #\)))
-                  collect token))
-             (read-number (stream)
+    (labels ((read-number (stream)
                (parse-integer
                 (coerce (loop for digit = (read-char stream)
                            for next = (peek-char nil stream nil)
                            collect digit
                            while (and next (digit-char-p next)))
-                        'string)))
-             (peek-number (stream)
-               (let ((next (peek-char nil stream nil)))
-                 (when (and next (digit-char-p next))
-                   (read-number stream))))
+                        'string)))             
              (add-molecule-atom (element)
-               (let ((count
-                      (setf (gethash element element-count)
-                            (1+ (or (gethash element element-count) 0)))))
+               (let ((count (setf (gethash element element-count)
+                                  (1+ (or (gethash element element-count) 0)))))
                  (add-atom mol (id element)
                            (format nil "~A~A" (id element) count))))
-             (read-smiles-token (stream)
-               (let ((number (peek-number stream)))
-                 (if number
-                     (print number)
-                     (let ((char (read-char stream nil nil)))
-                       (cond ((null char) nil) 
-                             ((eql char #\[)
-                              (make-atom (coerce (loop for c = (read-char stream)
-                                                    while (not (eql c #\]))
-                                                    collect c)
-                                                 'string)))
-                             ((eql char #\()
-                              (read-branch stream))
-                             ((eql char #\-)
-                              :double)
-                             ((eql char #\=)
-                              :double)
-                             ((eql char #\#)
-                              :triple)
-                             ((eql char #\:)
-                              :aromatic)
-                             ((eql char #\)) #\))
-                             ((eql char #\]) #\])
-                             (char
-                              (let ((element (get-element (string char)))
-                                    (number (peek-number stream)))
-                                (if number
-                                    (let* ((key (cons element number))
-                                           (lookup (gethash key atoms)))
-                                      (if lookup
-                                          lookup
-                                          (let ((atom (add-molecule-atom element)))
-                                            (setf (gethash key atoms) atom)
-                                            atom)))
-                                    (add-molecule-atom element))))))))))
+             (read-branch (stream &optional source)
+               (list (cons :branch
+                           (loop for token = (read-smiles-stream stream source)
+                              while token))))
+             (read-smiles-tokens (stream &optional source)
+               (let ((char (read-char stream nil nil)))
+                 (cond
+                   ((null char) nil) 
+                   ((eql char #\[)
+                    (make-atom (coerce (loop for c = (read-char stream)
+                                          while (not (eql c #\]))
+                                          collect c)
+                                       'string)))
+                   ((eql char #\()
+                    (read-branch stream source))
+                   ((eql char #\)) nil)
+                   ((eql char #\-) (list (cons :bond :single)))
+                   ((eql char #\=) (list (cons :bond :double)))
+                   ((eql char #\#) (list (cons :bond :triple)))
+                   ((eql char #\:) (list (cons :bond :aromatic)))
+                   ((or (digit-char-p char)
+                        (eql char #\%))
+                    (let ((number (or (digit-char-p char)
+                                      (read-number stream))))
+
+                      (if number
+                          (let* ((lookup (gethash number ring-openings)))
+                            (if lookup
+                                (list (cons :ring lookup))
+                                (list (cons :ring number))))
+                          (error "Coudln't read number!"))))
+                   (char
+                    (let ((element (get-element (string char))))
+                      (list (cons :atom (add-molecule-atom element))))))))
+             (read-smiles-stream (stream &optional last)
+               (loop for tokens = (read-smiles-tokens stream last)
+                  with bond-type = :single
+                  while tokens
+                  do
+                  (loop for token in tokens
+                     do (case (car token) 
+                          (:bond (setf bond-type (cdr token)))
+                          (:ring
+                           (let ((ring (cdr token)))
+                             (if (numberp ring)
+                                 (setf (gethash ring ring-openings) last)
+                                 (add-bond mol ring last
+                                           :type (get-bond-order-keyword bond-type)
+                                           :order (get-bond-order-number bond-type)))))
+                          (:atom
+                           (let ((atom (cdr token)))
+                             (when last (add-bond mol last atom
+                                                  :type (get-bond-order-keyword bond-type)
+                                                  :order (get-bond-order-number bond-type)))
+                             (setf bond-type :single)
+                             (setf last atom))))))))
       (with-input-from-string (stream string)
-        (loop for token = (read-smiles-token stream)
-           with last
-           with bond-type = :single
-           while token
-           do
-             (case token 
-               ((:single
-                 :double
-                 :triple
-                 :aromatic)
-                (setf bond-type token))
-               (t 
-                (when last (add-bond mol last token
-                                     :type (get-bond-order-keyword bond-type)
-                                     :order (get-bond-order-number bond-type)))
-                (setf bond-type :single)
-                (setf last token))))))
+        (read-smiles-stream stream)))
     mol))
 
 (defun add-hydrogens (molecule)
+  "Adds hydrogens to atoms in a molecule such that each atom has the
+lowest normal valence consistent with the number of pre-existing bonds
+for that atom."
   (let ((hydrogen-count 0)
         (hydrogen (get-element 1)))
     (dfs-map molecule (first-node molecule)
