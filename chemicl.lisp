@@ -60,6 +60,7 @@
 
 (defclass atom (node)
   ((element :initarg :element :accessor element :initform nil)
+   (charge :initarg :charge :accessor charge :initform 0)
    (isotope-mass :initarg :isotope-mass :accessor isotope-mass :initform nil))
   (:documentation "A class for representing individual atoms. For
   example, a molecule of hydrogen class would contain two atom
@@ -83,7 +84,11 @@
                       (element object)
                       (id (element object))))
                 "Element: unbound")
-            (node-name object))))
+            (node-name object))
+    (cond ((plusp (charge object))
+           (format stream " +~S" (charge object)))
+          ((minusp (charge object))
+           (format stream " ~S" (charge object))))))
 
 (defmethod mass ((atom atom))
   (mass (element atom)))
@@ -289,6 +294,14 @@ string, gets the element whose symbol is identifier."
                (incf mass (mass atom))))
     mass))
 
+(defmethod charge ((molecule molecule))
+  (let ((charge 0))
+    (dfs-map molecule
+             (first-node molecule)
+             (lambda (atom)
+               (incf charge (charge atom))))
+    charge))
+
 (defun count-element (molecule element-id)
   (let ((element-count 0)
         (element (get-element element-id)))
@@ -351,7 +364,12 @@ of the MOLECULE class with the appropriate atoms and bonds."
                            for next = (peek-char nil stream nil)
                            collect digit
                            while (and next (digit-char-p next)))
-                        'string)))             
+                        'string)))
+             (read-charge (stream)
+               (or
+                (let ((digit (digit-char-p (peek-char nil stream))))
+                  (when digit (read-number stream)))
+                1))
              (read-bracket-expression (stream)
                (let (mass)
                  (let ((char (peek-char nil stream)))
@@ -360,14 +378,16 @@ of the MOLECULE class with the appropriate atoms and bonds."
                    (let ((atom (add-molecule-atom
                                 (get-element
                                  (coerce
-                                  (loop for c = (read-char stream)
-                                     collect c 
-                                     while (alpha-char-p (peek-char nil stream)))
+                                  (cons (read-char stream)
+                                        (let ((next (peek-char nil stream)))
+                                          (when (and (alpha-char-p next)
+                                                     (lower-case-p next))
+                                            (cons (read-char stream) nil))))
                                   'string)))))
                      (when mass (setf (isotope-mass atom) mass))
                      (let ((char (peek-char nil stream)))
                        (cond ((eq char #\]) (read-char stream))
-                             ((char-equal #\H)
+                             ((char-equal char #\H)
                               (read-char stream)
                               (let ((count
                                      (if (digit-char-p
@@ -375,8 +395,20 @@ of the MOLECULE class with the appropriate atoms and bonds."
                                          (read-number stream) 
                                          1)))
                                 (dotimes (i count)
-                                  (let ((h (add-molecule-atom 1)))
+                                  (let ((h (add-molecule-atom (get-element "H"))))
                                     (add-bond mol atom h)))))))
+                     (let ((char (peek-char nil stream)))
+                       (cond ((eq char #\]) (read-char stream))
+                             ((eq char #\-)
+                              (read-char stream)
+                              (let ((charge (- (read-charge stream))))
+                                (setf (charge atom) charge))
+                              (read-char stream))
+                             ((eq char #\+)
+                              (read-char stream)
+                              (let ((charge (read-charge stream)))
+                                (setf (charge atom) charge))
+                              (read-char stream))))
                      (list (cons :explicit-atom atom))))))
              (add-molecule-atom (element)
                (let ((count (setf (gethash element element-count)
