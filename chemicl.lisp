@@ -58,8 +58,9 @@
   (print-unreadable-object (object stream :type t :identity t)
     (print-element-data object stream)))
 
-(defclass atom (node)
-  ((element :initarg :element :accessor element :initform nil)
+(defclass atom ()
+  ((name :initarg :name :accessor atom-name :initform nil)
+   (element :initarg :element :accessor element :initform nil)
    (charge :initarg :charge :accessor charge :initform 0)
    (isotope-mass :initarg :isotope-mass :accessor isotope-mass :initform nil))
   (:documentation "A class for representing individual atoms. For
@@ -77,14 +78,15 @@
 
 (defmethod print-object ((object atom) stream)
   (print-unreadable-object (object stream :type t :identity t)
-    (format stream "~S ~S" 
+    (format stream " ~S" 
             (if (slot-boundp object 'element)
                 (when (element object)
                   (if (> *atom-print-verbosity* 0)
                       (element object)
                       (id (element object))))
-                "Element: unbound")
-            (node-name object))
+                "Element: unbound"))
+    (when (slot-boundp object 'name)
+      (format stream " ~S" (atom-name object)))
     (cond ((plusp (charge object))
            (format stream " +~S" (charge object)))
           ((minusp (charge object))
@@ -96,14 +98,26 @@
 (defmethod exact-mass ((atom atom))
   (mass (element atom)))
 
+
+;;; We need a way of explicitly storing configurations around double
+;;; bonds and configurations at chiral centers. Hrm...
 (defclass molecule (simple-edge-list-graph)
-  ((name :initarg :name :accessor name))
+  ((name :initarg :name :accessor name)
+   (atom-name-hash :accessor atom-name-hash
+                   :initform (make-hash-table :test 'equal)))
   (:documentation "A class for representing molecules."))
+
+(defgeneric get-atom (molecule name)
+  (:method ((molecule molecule) (atom atom))
+    atom)
+  (:method ((molecule molecule) name)
+    (gethash name (atom-name-hash molecule))))
 
 (defgeneric add-atom (molecule identifier name)
   (:method ((molecule molecule) identifier name)
     (let ((atom (make-atom identifier :name name)))
       (add-node molecule atom)
+      (setf (gethash name (atom-name-hash molecule)) atom)
       atom)))
 
 (defgeneric atom-count (molecule)
@@ -113,7 +127,7 @@
 (defun find-atom (molecule atom-identifier)
   (typecase atom-identifier
     (atom atom-identifier)
-    (string (get-node molecule atom-identifier))))
+    (string (get-atom molecule atom-identifier))))
 
 (defparameter *bond-orders* 
   '((:single . 1)
@@ -133,7 +147,8 @@
 
 (defclass bond (edge)
   ((type :accessor bond-type :initarg :type :initform :single)
-   (order :accessor bond-order :initarg :order :initform 1)))
+   (order :accessor bond-order :initarg :order :initform 1)
+   (direction :accessor bond-direction :initarg :direction :initform nil)))
 
 (defmethod print-edge-data :after ((object bond) stream)
   (format stream " ~S ~S" 
@@ -142,7 +157,10 @@
               "Type: unbound")
           (if (slot-boundp object 'order)
               (bond-order object)
-              "Order: unbound")))
+              "Order: unbound"))
+  (when (and (slot-boundp object 'direction)
+           (bond-direction object))
+    (format stream " ~S" (bond-direction object))))
 
 (defgeneric atom-bond-order (molecule atom))
 
@@ -156,10 +174,10 @@
       (atom-bond-order molecule atom))))
 
 (defgeneric add-bond (molecule atom-identifier-1 atom-identifier-2
-                               &key type order))
+                               &key type order direction))
 
 (defmethod add-bond ((molecule molecule) atom-identifier-1 atom-identifier-2
-                     &key (type :single) (order 1))
+                     &key (type :single) (order 1) direction)
   (let ((atom-1 (find-atom molecule atom-identifier-1))
         (atom-2 (find-atom molecule atom-identifier-2)))
     (let ((bond (apply #'make-instance 'bond
@@ -167,10 +185,21 @@
                        :node2 atom-2
                        (append
                         (when type `(:type ,type))
-                        (when order `(:order ,order))))))
+                        (when order `(:order ,order))
+                        (when direction `(:direction ,direction))))))
       (add-edge molecule bond)
       bond)))
 
+(defun double-bond-configuration (molecule bond)
+  (let ((atom1 (node1 bond))
+        (atom2 (node2 bond)))
+    (let ((atom1-bonds
+           (remove bond (find-edges-containing molecule atom1)))
+          (atom2-bonds
+           (remove bond (find-edges-containing molecule atom2))))
+      (cons atom1-bonds atom2-bonds))))
+
+;;;
 ;;; B (3), C (4), N (3,5), O (2), P (3,5), S (2,4,6), and 1 for the
 ;;; halogens
 
@@ -288,16 +317,14 @@ string, gets the element whose symbol is identifier."
 
 (defmethod mass ((molecule molecule))
   (let ((mass 0.0d0))
-    (dfs-map molecule
-             (first-node molecule)
+    (map-nodes molecule
              (lambda (atom)
                (incf mass (mass atom))))
     mass))
 
 (defmethod charge ((molecule molecule))
   (let ((charge 0))
-    (dfs-map molecule
-             (first-node molecule)
+    (map-nodes molecule
              (lambda (atom)
                (incf charge (charge atom))))
     charge))
