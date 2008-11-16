@@ -153,6 +153,9 @@ of the MOLECULE class with the appropriate atoms and bonds."
                    ((eql char #\=) (list (cons :bond :double)))
                    ((eql char #\#) (list (cons :bond :triple)))
                    ((eql char #\:) (list (cons :bond :aromatic)))
+                   ((eql char #\/) (list (cons :bond :up)))
+                   ((eql char #\\) (list (cons :bond :down)))
+                   ((eql char #\.) (list (cons :disconnected nil)))
                    ((or (digit-char-p char)
                         (eql char #\%))
                     (let ((number (or (digit-char-p char)
@@ -175,6 +178,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
                   do
                   (loop for token in tokens
                      do (case (car token) 
+                          (:disconnected (setf last nil))
                           (:bond (setf bond-type (cdr token)))
                           (:ring
                            (let ((ring (cdr token)))
@@ -187,6 +191,12 @@ of the MOLECULE class with the appropriate atoms and bonds."
                                    (setf (gethash ring ring-openings) nil)))))
                           ((:atom :explicit-atom)
                            (let ((atom (cdr token)))
+                             (cond ((eql bond-type :up)
+                                    (print (list 'up last atom))
+                                    (setf bond-type :single))
+                                   ((eql bond-type :down)
+                                    (print (list 'down last atom))
+                                    (setf bond-type :single)))
                              (when last (add-bond mol last atom
                                                   :type (get-bond-order-keyword bond-type)
                                                   :order (get-bond-order-number bond-type)))
