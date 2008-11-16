@@ -120,11 +120,11 @@
 
 (defparameter *methane*
   (let ((mol (make-molecule :name "methane")))
-    (let ((c1 (make-atom :c :name "C1")))
-      (add-bond mol c1 (make-atom :h :name "H1"))
-      (add-bond mol c1 (make-atom :h :name "H2"))
-      (add-bond mol c1 (make-atom :h :name "H3"))
-      (add-bond mol c1 (make-atom :h :name "H4")))
+    (let ((c1 (add-atom mol :c "C1")))
+      (add-bond mol c1 (add-atom mol :h "H1"))
+      (add-bond mol c1 (add-atom mol :h "H2"))
+      (add-bond mol c1 (add-atom mol :h "H3"))
+      (add-bond mol c1 (add-atom mol :h "H4")))
     mol))
 
 (defparameter *ethane*
@@ -140,6 +140,18 @@
       (add-bond mol c2 (add-atom mol :h "H6")))
     mol))
 
+;;; SMILES examples
+(defparameter *hexane* (parse-smiles-string "CCCCCC"))
+(defparameter *cycloehexane* (parse-smiles-string "C1CCCCC1"))
+(defparameter *benzene* (parse-smiles-string "c1ccccc1"))
+
+(defparameter *pyrrole* (parse-smiles-string "[nH]1cccc1"))
+
 (defparameter *tamoxifen*
   (parse-smiles-string "CCC(=C(C1=CC=CC=C1)C2=CC=C(C=C2)OCCN(C)C)C3=CC=CC=C3"))
 
+(defparameter *phentermine*
+  (parse-smiles-string "CC(C)(N)Cc1ccccc1"))
+
+(defparameter *Z-1.2-difluoroethene*
+  (parse-smiles-string "F/C=C/F"))
