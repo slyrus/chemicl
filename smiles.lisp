@@ -30,11 +30,20 @@
 
 (in-package :chemicl)
 
+(define-condition smiles-error (error)
+  ((description :initarg :description 
+                :reader smiles-error-description))
+  (:report
+   (lambda (condition stream)
+     (write-string (smiles-error-description condition) stream))))
+
 (defun add-hydrogens (molecule &optional exclude-list)
   "Adds hydrogens to atoms in a molecule such that each atom has the
 lowest normal valence consistent with the number of pre-existing bonds
-for that atom."
-  (let ((hydrogen-count (count-element molecule "H")))
+for that atom. Returns two values, molecule and a list of the newly
+added hydrogen ATOMs."
+  (let ((hydrogen-count (count-element molecule "H"))
+        atoms)
     (dfs-map molecule
              (first-node molecule)
              (lambda (atom)
@@ -51,8 +60,9 @@ for that atom."
                        (dotimes (i (truncate count))
                          (let ((h-atom (add-atom molecule 1 
                                                  (format nil "H~A" (incf hydrogen-count)))))
-                           (add-bond molecule atom h-atom))))))))))
-  molecule)
+                           (push h-atom atoms)
+                           (add-bond molecule atom h-atom)))))))))
+    (values molecule (nreverse atoms))))
 
 (defparameter *aromatic-atoms* '("c" "n" "o" "p" "s" "as" "se" "*"))
 
@@ -62,11 +72,13 @@ for that atom."
 (defun parse-smiles-string (string &optional name)
   "Parses a SMILES description of a molecule and returns an instance
 of the MOLECULE class with the appropriate atoms and bonds."
+  (declare (optimize (debug 3)))
   (let ((mol (apply #'make-instance 'molecule
                     (when name `(:name ,name))))
         (ring-openings (make-hash-table))
         (element-count (make-hash-table))
-        (explicit-atoms)
+        first-atom
+        explicit-atoms
         aromatic
         chirality)
     (labels ((read-number (stream)
@@ -134,8 +146,14 @@ of the MOLECULE class with the appropriate atoms and bonds."
              (add-molecule-atom (element)
                (let ((count (setf (gethash element element-count)
                                   (1+ (or (gethash element element-count) 0)))))
-                 (add-atom mol (id element)
-                           (format nil "~A~A" (id element) count))))
+                 (let ((atom (add-atom mol (id element)
+                                       (format nil "~A~A" (id element) count))))
+                   ;; we need to squirrel away the first atom because
+                   ;; the chirality w.r.t. implicit H atoms is
+                   ;; different for the first ato.
+                   (unless first-atom
+                     (setf first-atom atom))
+                   atom)))
              (read-branch (stream &optional source)
                (list (cons :branch
                            (loop for token = (read-smiles-stream stream source)
@@ -166,11 +184,17 @@ of the MOLECULE class with the appropriate atoms and bonds."
                             (if lookup
                                 (list (cons :ring lookup))
                                 (list (cons :ring number))))
-                          (error "Coudln't read number!"))))
+                          (error 'smiles-error :description "Couldn't read number!"))))
                    (char
                     (when (aromaticp (coerce (list char) 'string))
                       (setf aromatic t))
-                    (list (cons :atom (add-molecule-atom (get-element (string char)))))))))
+                    (list (cons :atom (add-molecule-atom
+                                       (get-element
+                                        ;; check for *, and use
+                                        ;; element 0 for wildcard.
+                                        (if (char-equal char #\*)
+                                            0
+                                            (string char))))))))))
              (read-smiles-stream (stream &optional last)
                (loop for tokens = (read-smiles-tokens stream last)
                   with bond-type = :single
@@ -190,16 +214,19 @@ of the MOLECULE class with the appropriate atoms and bonds."
                                              :order (get-bond-order-number bond-type))
                                    (setf (gethash ring ring-openings) nil)))))
                           ((:atom :explicit-atom)
-                           (let ((atom (cdr token)))
+                           (let ((atom (cdr token))
+                                 bond-direction)
                              (cond ((eql bond-type :up)
-                                    (print (list 'up last atom))
-                                    (setf bond-type :single))
+                                    (setf bond-type :single)
+                                    (setf bond-direction :up))
                                    ((eql bond-type :down)
-                                    (print (list 'down last atom))
-                                    (setf bond-type :single)))
-                             (when last (add-bond mol last atom
-                                                  :type (get-bond-order-keyword bond-type)
-                                                  :order (get-bond-order-number bond-type)))
+                                    (setf bond-type :single)
+                                    (setf bond-direction :down)))
+                             (when last (apply #'add-bond mol last atom
+                                               :type (get-bond-order-keyword bond-type)
+                                               :order (get-bond-order-number bond-type)
+                                               (when bond-direction
+                                                 `(:direction ,bond-direction))))
                              (setf bond-type (if aromatic
                                                  :aromatic 
                                                  :single))
@@ -208,6 +235,14 @@ of the MOLECULE class with the appropriate atoms and bonds."
                                (push atom explicit-atoms)))))))))
       (with-input-from-string (stream string)
         (read-smiles-stream stream)))
-    (add-hydrogens mol explicit-atoms)
+    ;; Now we need to do some post-processing.
+
+    ;; 2. Find aromatic rings and replace Kekule structures with
+    ;; explicitly aromatic rings. Unfortunately, we need to do this
+    ;; BEFORE we add the hydrogens, I think, 
+
+    ;; 1. Add implicit hydrogens
+    (let ((implicit-h-atoms (nth-value 1 (add-hydrogens mol explicit-atoms)))))
+    
     mol))
 

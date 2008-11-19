@@ -150,8 +150,15 @@
 (defparameter *tamoxifen*
   (parse-smiles-string "CCC(=C(C1=CC=CC=C1)C2=CC=C(C=C2)OCCN(C)C)C3=CC=CC=C3"))
 
+(defparameter *z-tamoxifen*
+  (parse-smiles-string "CC/C(=C(\\C1=CC=CC=C1)/C2=CC=C(C=C2)OCCN(C)C)/C3=CC=CC=C3"))
+
 (defparameter *phentermine*
   (parse-smiles-string "CC(C)(N)Cc1ccccc1"))
 
 (defparameter *Z-1.2-difluoroethene*
   (parse-smiles-string "F/C=C/F"))
+
+(defparameter *E-1.2-difluoroethene*
+  (parse-smiles-string "F/C=C\\F"))
+
