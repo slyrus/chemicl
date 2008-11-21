@@ -35,6 +35,7 @@
   (:nicknames #:chem)
   (:export #:element
            #:get-element
+           #:id
 
            #:atom
            #:make-atom
@@ -47,5 +48,5 @@
            
            #:get-normal-valence
            #:mass)
-  (:use #:cl #:epigraph))
+  (:use #:cl))
 

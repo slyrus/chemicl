@@ -5,7 +5,7 @@
   :version #.(with-open-file
                  (vers (merge-pathnames "version.lisp-expr" *load-truename*))
                (read vers))
-  :licence "BSD"
+  :licence "For Internal Use Only"
   :description "A library for representing chemical structures"
   :depends-on (cxml cxml-stp epigraph)
   :components

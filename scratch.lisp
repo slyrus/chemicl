@@ -90,7 +90,7 @@
     mol))
 
 (find-atom *benzene* "C1")
-(find-edges-containing *benzene* (find-atom *benzene* "C1"))
+(graph:find-edges-containing *benzene* (find-atom *benzene* "C1"))
 (atom-bond-order *benzene* "C1")
 (atom-bond-order *benzene* "H1")
 

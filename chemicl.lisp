@@ -3,29 +3,7 @@
 ;;; Copyright (c) 2008 Cyrus Harmon (ch-lisp@bobobeach.com)
 ;;; All rights reserved.
 ;;;
-;;; Redistribution and use in source and binary forms, with or without
-;;; modification, are permitted provided that the following conditions
-;;; are met:
-;;;
-;;;   * Redistributions of source code must retain the above copyright
-;;;     notice, this list of conditions and the following disclaimer.
-;;;
-;;;   * Redistributions in binary form must reproduce the above
-;;;     copyright notice, this list of conditions and the following
-;;;     disclaimer in the documentation and/or other materials
-;;;     provided with the distribution.
-;;;
-;;; THIS SOFTWARE IS PROVIDED BY THE AUTHOR 'AS IS' AND ANY EXPRESSED
-;;; OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-;;; WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-;;; ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-;;; DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-;;; DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-;;; GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-;;; INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-;;; WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-;;; NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-;;; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+;;; Redistribution and use in source and binary forms prohibited.
 ;;;
 
 (in-package :chemicl)
@@ -101,7 +79,7 @@
 
 ;;; We need a way of explicitly storing configurations around double
 ;;; bonds and configurations at chiral centers. Hrm...
-(defclass molecule (simple-edge-list-graph)
+(defclass molecule (graph:simple-edge-list-graph)
   ((name :initarg :name :accessor name)
    (atom-name-hash :accessor atom-name-hash
                    :initform (make-hash-table :test 'equal)))
@@ -116,13 +94,13 @@
 (defgeneric add-atom (molecule identifier name)
   (:method ((molecule molecule) identifier name)
     (let ((atom (make-atom identifier :name name)))
-      (add-node molecule atom)
+      (graph:add-node molecule atom)
       (setf (gethash name (atom-name-hash molecule)) atom)
       atom)))
 
 (defgeneric atom-count (molecule)
   (:method ((molecule molecule))
-    (node-count molecule)))
+    (graph:node-count molecule)))
 
 (defun find-atom (molecule atom-identifier)
   (typecase atom-identifier
@@ -145,12 +123,12 @@
     (keyword (car (assoc keyword-or-number *bond-orders*)))
     (number (car (rassoc keyword-or-number *bond-orders*)))))
 
-(defclass bond (edge)
+(defclass bond (graph:edge)
   ((type :accessor bond-type :initarg :type :initform :single)
    (order :accessor bond-order :initarg :order :initform 1)
    (direction :accessor bond-direction :initarg :direction :initform nil)))
 
-(defmethod print-edge-data :after ((object bond) stream)
+(defmethod graph:print-edge-data :after ((object bond) stream)
   (format stream " ~S ~S" 
           (if (slot-boundp object 'type)
               (bond-type object)
@@ -165,7 +143,7 @@
 (defgeneric atom-bond-order (molecule atom))
 
 (defmethod atom-bond-order ((molecule molecule) (atom atom))
-  (let ((bonds (find-edges-containing molecule atom)))
+  (let ((bonds (graph:find-edges-containing molecule atom)))
     (reduce #'+ bonds :key 'bond-order)))
 
 (defmethod atom-bond-order ((molecule molecule) atom-identifier)
@@ -187,16 +165,16 @@
                         (when type `(:type ,type))
                         (when order `(:order ,order))
                         (when direction `(:direction ,direction))))))
-      (add-edge molecule bond)
+      (graph:add-edge molecule bond)
       bond)))
 
 (defun double-bond-configuration (molecule bond)
-  (let ((atom1 (node1 bond))
-        (atom2 (node2 bond)))
+  (let ((atom1 (graph:node1 bond))
+        (atom2 (graph:node2 bond)))
     (let ((atom1-bonds
-           (remove bond (find-edges-containing molecule atom1)))
+           (remove bond (graph:find-edges-containing molecule atom1)))
           (atom2-bonds
-           (remove bond (find-edges-containing molecule atom2))))
+           (remove bond (graph:find-edges-containing molecule atom2))))
       (cons atom1-bonds atom2-bonds))))
 
 ;;;
@@ -317,14 +295,14 @@ string, gets the element whose symbol is identifier."
 
 (defmethod mass ((molecule molecule))
   (let ((mass 0.0d0))
-    (map-nodes molecule
+    (graph:map-nodes molecule
              (lambda (atom)
                (incf mass (mass atom))))
     mass))
 
 (defmethod charge ((molecule molecule))
   (let ((charge 0))
-    (map-nodes molecule
+    (graph:map-nodes molecule
              (lambda (atom)
                (incf charge (charge atom))))
     charge))
@@ -332,20 +310,20 @@ string, gets the element whose symbol is identifier."
 (defun count-element (molecule element-id)
   (let ((element-count 0)
         (element (get-element element-id)))
-    (dfs-map molecule (first-node molecule)
+    (graph:dfs-map molecule (graph:first-node molecule)
              (lambda (atom)
                (when (eq (element atom) element)
                  (incf element-count))))
     element-count))
 
 (defun count-elements (molecule)
-   (let ((element-count-hash (make-hash-table)))
-    (dfs-map molecule (first-node molecule)
-             (lambda (atom)
-               (setf (gethash (element atom) element-count-hash)
-                     (1+ (or (gethash (element atom)
-                                      element-count-hash)
-                             0)))))
+  (let ((element-count-hash (make-hash-table)))
+    (graph:dfs-map molecule (graph:first-node molecule)
+                   (lambda (atom)
+                     (setf (gethash (element atom) element-count-hash)
+                           (1+ (or (gethash (element atom)
+                                            element-count-hash)
+                                   0)))))
     (let (l)
       (maphash (lambda (k v)
                  (push (cons k v) l))
