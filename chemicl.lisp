@@ -12,7 +12,7 @@
   ((name :initarg :name :accessor atom-name :initform nil)
    (element :initarg :element :accessor element :initform nil)
    (charge :initarg :charge :accessor charge :initform 0)
-   (isotope-mass :initarg :isotope-mass :accessor isotope-mass :initform nil))
+   (isotope :initarg :isotope :accessor isotope :initform nil))
   (:documentation "A class for representing individual atoms. For
   example, a molecule of hydrogen class would contain two atom
   instances, each of whose element slots would contain the (same)
@@ -46,7 +46,9 @@
   (mass (element atom)))
 
 (defmethod exact-mass ((atom atom))
-  (mass (element atom)))
+  (if (isotope atom)
+      (isotope-exact-mass (isotope atom))
+      (isotope-exact-mass (car (isotopes (element atom))))))
 
 (defmethod get-normal-valence ((atom atom))
   (get-normal-valence (element atom)))
@@ -194,6 +196,13 @@
              (lambda (atom)
                (incf mass (mass atom))))
     mass))
+
+(defmethod exact-mass ((molecule molecule))
+  (let ((exact-mass 0.0d0))
+    (graph:map-nodes molecule
+             (lambda (atom)
+               (incf exact-mass (exact-mass atom))))
+    exact-mass))
 
 (defmethod charge ((molecule molecule))
   (let ((charge 0))

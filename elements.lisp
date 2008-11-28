@@ -52,6 +52,14 @@ string, gets the element whose symbol is identifier."
     (string (gethash identifier *element-hash*))
     (symbol (gethash (symbol-name identifier) *element-hash*))))
 
+(defun get-isotope (identifier number)
+  (typecase identifier
+    (element
+     (find number (isotopes identifier) :key #'isotope-number))
+    (t
+     (find number (isotopes (get-element identifier))
+           :key #'isotope-number))))
+
 (defmacro with-cml-namespace (&body body)
   `(xpath:with-namespaces ((nil "http://www.xml-cml.org/schema")
                            ("bo" "http://www.blueobelisk.org/dict/terminology" ))
