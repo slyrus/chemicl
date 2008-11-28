@@ -11,10 +11,14 @@
   :components
   ((:static-file "version" :pathname #p"version.lisp-expr")
    (:cl-source-file "package")
-   (:cl-source-file "chemicl" :depends-on (package))
+   (:cl-source-file "elements" :depends-on (package))
+   (:cl-source-file "chemicl" :depends-on (package elements))
    (:cl-source-file "smiles" :depends-on (package chemicl))
    (:static-file "COPYRIGHT")
-   (:static-file "elementdata.xml")
+   
    (:static-file "README")
-   (:static-file "make-dist" :pathname #.(make-pathname :name "make-dist" :type "sh"))))
+   (:static-file "make-dist" :pathname #.(make-pathname :name "make-dist" :type "sh"))
+   (:module "data"
+            :components ((:static-file "elementdata.xml")
+                         (:static-file "isotopes.xml")))))
 
