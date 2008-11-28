@@ -40,6 +40,9 @@
   (print-unreadable-object (object stream :type t :identity t)
     (print-element-data object stream)))
 
+(defvar *elements*)
+(defvar *element-hash* (make-hash-table :test 'equalp))
+
 (defun get-element (identifier)
   "Gets the element indicated by identifier. If identifer is a number,
 gets the element whose atomic number is identifier. If identifier is a
@@ -62,8 +65,6 @@ string, gets the element whose symbol is identifier."
        (unless (xpath:node-set-empty-p ,node)
          (xpath:number-value ,node)))))
 
-(defvar *elements*)
-(defvar *element-hash* (make-hash-table :test 'equalp))
 ;;; read in the element data from elementdata.xml, parse it and store
 ;;; in the *elments* array, with the index into the array specified
 ;;; by the atomic number of the element.

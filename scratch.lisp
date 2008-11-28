@@ -1,4 +1,5 @@
 
+
 (asdf:oos 'asdf:load-op :chemicl)
 
 (in-package :chemicl)
@@ -141,17 +142,22 @@
     mol))
 
 ;;; SMILES examples
-(defparameter *hexane* (parse-smiles-string "CCCCCC"))
-(defparameter *cycloehexane* (parse-smiles-string "C1CCCCC1"))
-(defparameter *benzene* (parse-smiles-string "c1ccccc1"))
+(defparameter *hexane* (parse-smiles-string "CCCCCC" :name "hexane"))
+(defparameter *cycloehexane* (parse-smiles-string "C1CCCCC1"
+                                                  :name "cyclohexane"))
+(defparameter *benzene* (parse-smiles-string "c1ccccc1"
+                                             :name "benzene"))
 
-(defparameter *pyrrole* (parse-smiles-string "[nH]1cccc1"))
+(defparameter *pyrrole* (parse-smiles-string "[nH]1cccc1"
+                                             :name "pyrrole"))
 
 (defparameter *tamoxifen*
-  (parse-smiles-string "CCC(=C(C1=CC=CC=C1)C2=CC=C(C=C2)OCCN(C)C)C3=CC=CC=C3"))
+  (parse-smiles-string "CCC(=C(C1=CC=CC=C1)C2=CC=C(C=C2)OCCN(C)C)C3=CC=CC=C3"
+                       :name "tamoxifen"))
 
 (defparameter *z-tamoxifen*
-  (parse-smiles-string "CC/C(=C(\\C1=CC=CC=C1)/C2=CC=C(C=C2)OCCN(C)C)/C3=CC=CC=C3"))
+  (parse-smiles-string "CC/C(=C(\\C1=CC=CC=C1)/C2=CC=C(C=C2)OCCN(C)C)/C3=CC=CC=C3"
+                       :name "z-tamoxifen"))
 
 (defparameter *phentermine*
   (parse-smiles-string "CC(C)(N)Cc1ccccc1"))
@@ -162,3 +168,56 @@
 (defparameter *E-1.2-difluoroethene*
   (parse-smiles-string "F/C=C\\F"))
 
+(defparameter *furan*
+  (parse-smiles-string "C1=COC=C1"))
+
+(multiple-value-bind (mol bonds cycles)
+    (parse-smiles-string "CC/C(=C(\\C1=CC=CC=C1)/C2=CC=C(C=C2)OCCN(C)C)/C3=CC=CC=C3"
+                         :add-implicit-hydrogens nil)
+  (mapcar (lambda (x) (atom-bond-order mol x)) (butlast (car cycles))))
+
+(multiple-value-bind (mol bonds cycles)
+    (parse-smiles-string "CC/C(=C(\\C1=CC=CC=C1)/C2=CC=C(C=C2)OCCN(C)C)/C3=CC=CC=C3"
+                         :add-implicit-hydrogens nil)
+  (mapcar (lambda (x) (bond-order x)) bonds))
+
+
+(multiple-value-bind (edges nodes)
+    (graph:find-cycle *z-tamoxifen*)
+  (member-if (lambda (x) (and (find (graph:node1 x) nodes)
+                              (find (graph:node2 x) nodes)))
+             edges))
+
+(member "C5" (graph:find-cycle *z-tamoxifen*)
+        :key (lambda (x) (atom-name (graph:node1 x)))
+        :test 'equal)
+
+
+(defparameter *isotope-nodes*
+  (with-cml-namespace
+    (xpath:evaluate "/cml"
+                    (cxml:parse-file 
+                     (asdf:component-pathname
+                      (let ((path '("chemicl" "data" "isotopes.xml")))
+                        (reduce #'asdf:find-component (cdr path)
+                                :initial-value (asdf:find-system (car path)))))
+                     (stp:make-builder)))))
+
+(with-cml-namespace
+  (xpath:map-node-set->list
+   (lambda (node)
+     (xpath:map-node-set->list 
+      (lambda (node)
+        (stp:with-attributes ((element-type "elementType"))
+            node
+          (list element-type 
+                (xpath:number-value
+                 (xpath:evaluate "scalar[attribute::dictRef=\"bo:exactMass\"]" node))
+                (xpath:number-value
+                 (xpath:evaluate "scalar[attribute::dictRef=\"bo:relativeAbundance\"]" node)))))
+      (xpath:evaluate "isotopeList/isotope[attribute::elementType=\"H\"]" node)))
+   *isotope-nodes*))
+
+(mapcar (lambda (x) (* (isotope-relative-abundance x)
+                       (isotope-exact-mass x)))
+        (isotopes (get-element 6)))

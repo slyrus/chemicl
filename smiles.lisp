@@ -15,6 +15,24 @@
    (lambda (condition stream)
      (write-string (smiles-error-description condition) stream))))
 
+
+(defun available-pi-electrons (molecule atom ring)
+  (let* ((bonds (graph:find-edges-containing molecule atom))
+         (ring-bonds (intersection bonds ring))
+         (non-ring-bonds (set-difference bonds ring-bonds)))
+    (let ((ring-bond-order (reduce #'+ (mapcar #'bond-order ring-bonds)))
+          (non-ring-bond-order (reduce #'+ (mapcar #'bond-order non-ring-bonds))))
+      (cond ((equal (id (element atom)) "C")
+             (if (and (<= non-ring-bond-order 1)
+                      (<= ring-bond-order 3))
+                 1
+                 0))
+            ((equal (id (element atom)) "N")
+             (if (and (<= non-ring-bond-order 1)
+                      (<= ring-bond-order 3))
+                 1
+                 0))))))
+
 (defun add-hydrogens (molecule &optional exclude-list)
   "Adds hydrogens to atoms in a molecule such that each atom has the
 lowest normal valence consistent with the number of pre-existing bonds
@@ -43,10 +61,10 @@ added hydrogen ATOMs."
 
 (defparameter *aromatic-atoms* '("c" "n" "o" "p" "s" "as" "se" "*"))
 
-(defun aromaticp (string)
+(defun aromatic-smiles-atom (string)
   (find string *aromatic-atoms* :test 'equal))
 
-(defun parse-smiles-string (string &optional name)
+(defun parse-smiles-string (string &key name (add-implicit-hydrogens t))
   "Parses a SMILES description of a molecule and returns an instance
 of the MOLECULE class with the appropriate atoms and bonds."
   (declare (optimize (debug 3)))
@@ -92,7 +110,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
                           
                           (atom (add-molecule-atom
                                 (get-element element-string))))
-                     (when (aromaticp element-string)
+                     (when (aromatic-smiles-atom element-string)
                        (setf aromatic t))
                      (when mass (setf (isotope-mass atom) mass))
                      (let ((char (peek-char nil stream)))
@@ -163,7 +181,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
                                 (list (cons :ring number))))
                           (error 'smiles-error :description "Couldn't read number!"))))
                    (char
-                    (when (aromaticp (coerce (list char) 'string))
+                    (when (aromatic-smiles-atom (coerce (list char) 'string))
                       (setf aromatic t))
                     (list (cons :atom (add-molecule-atom
                                        (get-element
@@ -199,11 +217,12 @@ of the MOLECULE class with the appropriate atoms and bonds."
                                    ((eql bond-type :down)
                                     (setf bond-type :single)
                                     (setf bond-direction :down)))
-                             (when last (apply #'add-bond mol last atom
-                                               :type (get-bond-order-keyword bond-type)
-                                               :order (get-bond-order-number bond-type)
-                                               (when bond-direction
-                                                 `(:direction ,bond-direction))))
+                             (when last
+                               (apply #'add-bond mol last atom
+                                      :type (get-bond-order-keyword bond-type)
+                                      :order (get-bond-order-number bond-type)
+                                      (when bond-direction
+                                        `(:direction ,bond-direction))))
                              (setf bond-type (if aromatic
                                                  :aromatic 
                                                  :single))
@@ -217,9 +236,17 @@ of the MOLECULE class with the appropriate atoms and bonds."
     ;; 2. Find aromatic rings and replace Kekule structures with
     ;; explicitly aromatic rings. Unfortunately, we need to do this
     ;; BEFORE we add the hydrogens, I think, 
-
-    ;; 1. Add implicit hydrogens
-    (let ((implicit-h-atoms (nth-value 1 (add-hydrogens mol explicit-atoms)))))
     
-    mol))
+    #+nil 
+    (multiple-value-bind (bonds cycles cycles-removed-mol)
+        (graph:find-cycles mol)
+      (print bonds)
+      (print cycles)
+      
+      )
+    ;; 1. Add implicit hydrogens
+    (when add-implicit-hydrogens
+      (let ((implicit-h-atoms (nth-value 1 (add-hydrogens mol explicit-atoms))))))
+      
+    (values mol)))
 
