@@ -43,23 +43,28 @@
 (defvar *elements*)
 (defvar *element-hash* (make-hash-table :test 'equalp))
 
-(defun get-element (identifier)
-  "Returns the element indicated by identifier. If identifer is a number,
-the element whose atomic number is identifier returned. If identifier
-is a string or a symbol, the element whose two-letter elemental symbol
-matches identifier is returned. Note that the string and symbol lookup
+(defun get-element (element-identifier)
+  "Returns the element indicated by element-identifier. If
+element-identifier is a number, the element whose atomic number is
+element-identifier returned. If element-identifier is a string or a
+symbol, the element whose two-letter elemental symbol matches
+element-identifier is returned. Note that the string and symbol lookup
 is case-insensitive, so :fe can be used to refer to the element Iron."
-  (etypecase identifier
-    (number (aref *elements* identifier))
-    (string (gethash identifier *element-hash*))
-    (symbol (gethash (symbol-name identifier) *element-hash*))))
+  (etypecase element-identifier
+    (number (aref *elements* element-identifier))
+    (string (gethash element-identifier *element-hash*))
+    (symbol (gethash (symbol-name element-identifier) *element-hash*))))
 
-(defun get-isotope (identifier number)
-  (typecase identifier
+(defun get-isotope (element-identifier mass-number)
+  "Returns the isotope of the element specified by element-identifier
+whose mass number (the number of protons and neutrons) is
+mass-number."
+  (typecase element-identifier
     (element
-     (find number (isotopes identifier) :key #'isotope-number))
+     (find mass-number (isotopes element-identifier)
+           :key #'isotope-number))
     (t
-     (find number (isotopes (get-element identifier))
+     (find mass-number (isotopes (get-element element-identifier))
            :key #'isotope-number))))
 
 (defmacro with-cml-namespace (&body body)
@@ -175,5 +180,11 @@ is case-insensitive, so :fe can be used to refer to the element Iron."
 
 (defgeneric get-normal-valence (element)
   (:method ((element element))
-    (gethash element *element-normal-valences*)))
+    (gethash element *element-normal-valences*))
+  (:method ((string string))
+    (get-normal-valence (get-element string)))
+  (:documentation "Returns the normal valences for the specified
+  element, assuming it is in the following list, otherwise NIL. The
+  supported elements and their valences are: B: 3; C: 4; N: 3, 5; O:
+  2; P: 3, 5; S: 2, 4, 6; F: 1, Cl: 1, Br: 1, I 1."))
 

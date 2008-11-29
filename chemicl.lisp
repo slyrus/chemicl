@@ -21,9 +21,6 @@
   which can be NIL, indicating that the atom is not associated with
   any molecule."))
 
-;;; FIXME add a shared-initialize to initialize the exact atomic mass of the
-;;; atom etc... !!!
-
 (defparameter *atom-print-verbosity* 0)
 
 (defmethod print-object ((object atom) stream)
@@ -53,9 +50,6 @@
 (defmethod get-normal-valence ((atom atom))
   (get-normal-valence (element atom)))
 
-(defmethod get-normal-valence ((string string))
-  (get-normal-valence (get-element string)))
-
 (defun make-atom (element-identifier &rest args)
   "Returns a new instance of the atom class as specified by an
 element-identifer, which can be a number representing the atomic
@@ -80,14 +74,18 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
     (when (slot-boundp graph 'name)
       (setf (name new-graph) (name graph)))
     (when (slot-boundp graph 'atom-name-hash)
-      (setf (atom-name-hash new-graph) (alexandria:copy-hash-table (atom-name-hash graph))))
+      (setf (atom-name-hash new-graph)
+            (alexandria:copy-hash-table (atom-name-hash graph))))
     new-graph))
 
-(defgeneric get-atom (molecule name)
+(defgeneric get-atom (molecule atom-identifier)
   (:method ((molecule molecule) (atom atom))
     atom)
-  (:method ((molecule molecule) name)
-    (gethash name (atom-name-hash molecule))))
+  (:method ((molecule molecule) atom-identifier)
+    (gethash atom-identifier (atom-name-hash molecule)))
+  (:documentation "If atom-identifier is an atom, returns
+  atom-identifier as the atom-object. Otherwise, the atom named by
+  atom-identifier is returned."))
 
 (defgeneric add-atom (molecule element-identifier name)
   (:method ((molecule molecule) element-identifier name)
@@ -115,11 +113,6 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
   (:method ((molecule molecule))
     (graph:node-count molecule))
   ("Returns the number of atoms in molecule."))
-
-(defun find-atom (molecule atom-identifier)
-  (typecase atom-identifier
-    (atom atom-identifier)
-    (string (get-atom molecule atom-identifier))))
 
 (defparameter *bond-orders* 
   '((:single . 1)
@@ -168,7 +161,7 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
     (reduce #'+ bonds :key 'bond-order)))
 
 (defmethod atom-bond-order ((molecule molecule) atom-identifier)
-  (let ((atom (find-atom molecule atom-identifier)))
+  (let ((atom (get-atom molecule atom-identifier)))
     (when atom
       (atom-bond-order molecule atom))))
 
@@ -177,8 +170,8 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
 
 (defmethod add-bond ((molecule molecule) atom-identifier-1 atom-identifier-2
                      &key (type :single) (order 1) direction)
-  (let ((atom-1 (find-atom molecule atom-identifier-1))
-        (atom-2 (find-atom molecule atom-identifier-2)))
+  (let ((atom-1 (get-atom molecule atom-identifier-1))
+        (atom-2 (get-atom molecule atom-identifier-2)))
     (let ((bond (apply #'make-instance 'bond
                        :node1 atom-1
                        :node2 atom-2
