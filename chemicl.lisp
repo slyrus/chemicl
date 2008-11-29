@@ -56,6 +56,16 @@
 (defmethod get-normal-valence ((string string))
   (get-normal-valence (get-element string)))
 
+(defun make-atom (element-identifier &rest args)
+  "Returns a new instance of the atom class as specified by an
+element-identifer, which can be a number representing the atomic
+number of the element (such as 6 for Carbon), or a string or a lisp
+symbol containing an element symbol (such as Fe or :fe for Iron)."
+  (apply #'make-instance
+         'atom
+         :element (get-element element-identifier)
+         args))
+
 ;;; We need a way of explicitly storing configurations around double
 ;;; bonds and configurations at chiral centers. Hrm...
 (defclass molecule (graph:simple-edge-list-graph)
@@ -79,16 +89,32 @@
   (:method ((molecule molecule) name)
     (gethash name (atom-name-hash molecule))))
 
-(defgeneric add-atom (molecule identifier name)
-  (:method ((molecule molecule) identifier name)
-    (let ((atom (make-atom identifier :name name)))
+(defgeneric add-atom (molecule element-identifier name)
+  (:method ((molecule molecule) element-identifier name)
+    (let ((atom (make-atom element-identifier :name name)))
       (graph:add-node molecule atom)
       (setf (gethash name (atom-name-hash molecule)) atom)
-      atom)))
+      atom))
+  (:documentation "Adds a new instance of ATOM of the element
+  specified by the element-identifier, which can be an atomic number,
+  or a string or symbol whose value is the two letter elemental symbol
+  of the desired element."))
+
+(defgeneric remove-atom (molecule atom)
+  (:method ((molecule molecule) (atom atom))
+    (map nil
+         (lambda (edge) (graph:remove-edge molecule edge))
+         (graph:find-edges-containing molecule atom))
+    (graph:remove-node molecule atom)
+    (remhash (atom-name atom) (atom-name-hash molecule))
+    atom)
+  (:documentation "Removes the atom (and any edges containing it) from
+  molecule."))
 
 (defgeneric atom-count (molecule)
   (:method ((molecule molecule))
-    (graph:node-count molecule)))
+    (graph:node-count molecule))
+  ("Returns the number of atoms in molecule."))
 
 (defun find-atom (molecule atom-identifier)
   (typecase atom-identifier
@@ -183,12 +209,6 @@
       (loop for (x y) on list by #'cddr
          append (unless (eq x keywords)
                   (list x y)))))
-
-(defun make-atom (identifier &rest args)
-  (apply #'make-instance
-         'atom
-         :element (get-element identifier)
-         args))
 
 (defmethod mass ((molecule molecule))
   (let ((mass 0.0d0))

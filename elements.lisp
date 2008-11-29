@@ -44,9 +44,11 @@
 (defvar *element-hash* (make-hash-table :test 'equalp))
 
 (defun get-element (identifier)
-  "Gets the element indicated by identifier. If identifer is a number,
-gets the element whose atomic number is identifier. If identifier is a
-string, gets the element whose symbol is identifier."
+  "Returns the element indicated by identifier. If identifer is a number,
+the element whose atomic number is identifier returned. If identifier
+is a string or a symbol, the element whose two-letter elemental symbol
+matches identifier is returned. Note that the string and symbol lookup
+is case-insensitive, so :fe can be used to refer to the element Iron."
   (etypecase identifier
     (number (aref *elements* identifier))
     (string (gethash identifier *element-hash*))
