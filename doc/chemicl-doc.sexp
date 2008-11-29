@@ -124,7 +124,11 @@ elements, etc...  nodges and edges.")
      (:p #.(documentation 'make-atom 'function))))
 
   (:h2 "Molecule")
-  
+
+  (:p "The " (:code "MOLECULE") " class is a subclass of the
+  epigraph:graph class and is used to represent a given species of
+  molecule, such as water, benzene, alanine, etc...")
+
   (:list
    (:item "[class] "
      (:pre
@@ -154,4 +158,15 @@ elements, etc...  nodges and edges.")
      (:p #.(documentation 'atom-count 'function))))
 
   
-  (:h2 "Bond")))
+  (:h2 "Bond")
+  (:p "The " (:code "BOND") " class is a subclass of the graph:edge
+  class and is used to represent chemical bonds between atoms in a
+  molecule.")
+
+  (:list
+   (:item "[class] "
+     (:pre
+      (:code #q{(defclass bond (graph:edge)
+  ((type :accessor bond-type :initarg :type :initform :single)
+   (order :accessor bond-order :initarg :order :initform 1)
+   (direction :accessor bond-direction :initarg :direction :initform nil)))}))))))
