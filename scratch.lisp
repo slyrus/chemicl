@@ -142,7 +142,14 @@
     mol))
 
 ;;; SMILES examples
+(defparameter *methane* (parse-smiles-string "C" :name "methane"))
+(defparameter *ethane* (parse-smiles-string "CC" :name "ethane"))
+(defparameter *propane* (parse-smiles-string "CCC" :name "propane"))
+(defparameter *butane* (parse-smiles-string "CCCC" :name "butane"))
+(defparameter *pentane* (parse-smiles-string "CCCCC" :name "pentane"))
 (defparameter *hexane* (parse-smiles-string "CCCCCC" :name "hexane"))
+
+(defparameter *heavy-hexane* (parse-smiles-string "[13CH3]CCCCC" :name "hexane"))
 (defparameter *cycloehexane* (parse-smiles-string "C1CCCCC1"
                                                   :name "cyclohexane"))
 (defparameter *benzene* (parse-smiles-string "c1ccccc1"
@@ -221,3 +228,5 @@
 (mapcar (lambda (x) (* (isotope-relative-abundance x)
                        (isotope-exact-mass x)))
         (isotopes (get-element 6)))
+
+
