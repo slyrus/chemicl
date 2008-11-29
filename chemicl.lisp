@@ -112,7 +112,7 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
 (defgeneric atom-count (molecule)
   (:method ((molecule molecule))
     (graph:node-count molecule))
-  ("Returns the number of atoms in molecule."))
+  (:documentation "Returns the number of atoms in molecule."))
 
 (defparameter *bond-orders* 
   '((:single . 1)
