@@ -95,10 +95,10 @@ of the MOLECULE class with the appropriate atoms and bonds."
                          while (eql charge-char (peek-char nil stream))))
                     charge))))
              (read-bracket-expression (stream)
-               (let (mass)
+               (let (isotope-number)
                  (let ((char (peek-char nil stream)))
                    (when (digit-char-p char)
-                     (setf mass (read-number stream)))
+                     (setf isotope-number (read-number stream)))
                    (let* ((element-string 
                            (coerce
                             (cons (read-char stream)
@@ -112,7 +112,9 @@ of the MOLECULE class with the appropriate atoms and bonds."
                                 (get-element element-string))))
                      (when (aromatic-smiles-atom element-string)
                        (setf aromatic t))
-                     (when mass (setf (isotope-mass atom) mass))
+                     (when isotope-number
+                       (let ((isotope (get-isotope (element atom) isotope-number)))
+                         (setf (isotope atom) isotope)))
                      (let ((char (peek-char nil stream)))
                        (cond ((eq char #\]))
                              ((char-equal char #\H)
