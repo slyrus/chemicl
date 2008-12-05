@@ -12,7 +12,10 @@
   ((name :initarg :name :accessor atom-name :initform nil)
    (element :initarg :element :accessor element :initform nil)
    (charge :initarg :charge :accessor charge :initform 0)
-   (isotope :initarg :isotope :accessor isotope :initform nil))
+   (isotope :initarg :isotope :accessor isotope :initform nil)
+   (hybridization :initarg :hybridization
+                  :accessor hybridization
+                  :initform nil))
   (:documentation "A class for representing individual atoms. For
   example, a molecule of hydrogen class would contain two atom
   instances, each of whose element slots would contain the (same)
@@ -247,3 +250,25 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
                element-count-hash)
       (sort l #'< :key (lambda (x) (atomic-number (car x)))))))
 
+(defun excess-electrons (molecule atom)
+  (cond ((eql (element atom) (get-element "C"))
+         (if (< (atom-bond-order molecule atom) 4) 1 0))
+        ((eql (element atom) (get-element "N"))
+         (if (< (atom-bond-order molecule atom) (+ (charge atom) 3)) 1 0))
+        ((eql (element atom) (get-element "O"))
+         2)
+        (t 0)))
+
+(defun aromaticp (molecule ring)
+  "Uses Hunckle's 4n+2 rule to decide if a ring in a molecule is
+aromatic or not."
+  (let ((excess-electrons
+         (reduce #'+ (map 'list (lambda (atom) (excess-electrons molecule atom))
+                          ring))))
+    (and (> excess-electrons 5)
+         (zerop (rem (- excess-electrons 2) 4)))))
+
+(defclass spatial-arrangement () ())
+
+(defclass tetrahedral-center
+    (spatial-arrangement) ())

@@ -34,10 +34,20 @@
   (:shadow #:atom)
   (:nicknames #:chem)
   (:export #:element
-           #:get-element
            #:id
+           #:atomic-number
+           #:name
+           #:group
+           #:period
+           #:radii
+           #:max-bond-order
+           #:mass
+           #:electronegativity
+           #:charge
 
-           #:atom
+           #:get-element
+
+           #+nil #:atom
            #:make-atom
 
            #:molecule
@@ -47,6 +57,10 @@
            #:add-bond
            
            #:get-normal-valence
-           #:mass)
+           #:count-element
+           #:count-elements
+
+           #:parse-smiles-string)
+
   (:use #:cl))
 

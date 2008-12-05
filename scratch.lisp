@@ -72,7 +72,7 @@
 	 (add-edge-between-vertexes g source target))
     g))
 
-(defparameter *benzene*
+(defparameter *benzene-manual*
   (let ((mol (make-molecule :name "benzene")))
     (loop for i from 1 to 6
        do
@@ -84,7 +84,7 @@
                    (format nil "C~A" (1+ (mod (1- i) 6)))
                    (format nil "C~A" (1+ (mod i 6)))
                    :type :aromatic
-                   :order 1.5)
+                   :order (if (oddp i) 2 1))
          (add-bond mol
                    (format nil "C~A" i)
                    (format nil "H~A" i)))
@@ -95,7 +95,7 @@
 (atom-bond-order *benzene* "C1")
 (atom-bond-order *benzene* "H1")
 
-(defparameter *cyclohexane*
+(defparameter *cyclohexane-manual*
   (let ((mol (make-molecule :name "cyclohexane")))
     (add-atom mol 6 "C1")
     (add-atom mol 6 "C2")
@@ -230,3 +230,27 @@
         (isotopes (get-element 6)))
 
 
+
+;;;
+;;; CML stuff
+
+(defparameter *concat* (cxml:parse-file "cml/concatenated.xml" (stp:make-builder)))
+
+(xpath:with-namespaces ((nil "http://www.xml-cml.org/schema/cml2/core")
+                           ("bo" "http://www.blueobelisk.org/dict/terminology" ))
+        (xpath:evaluate "/list/molecule" *concat*))
+
+(defparameter *benzene-core*
+  (parse-smiles-string "C1=CC=CC=C1"
+                       :name "benzene-core"
+                       :add-implicit-hydrogens nil))
+
+(defparameter *furan-core*
+  (parse-smiles-string "O1C=CC=C1"
+                       :name "furan-core"
+                       :add-implicit-hydrogens nil))
+
+(defparameter *cyclotetraoctene-core*
+  (parse-smiles-string "C1=CC=CC=CC=C1"
+                       :name "cyclotetraoctene"
+                       :add-implicit-hydrogens nil))

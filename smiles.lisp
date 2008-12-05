@@ -59,7 +59,8 @@ added hydrogen ATOMs."
                    (add-bond molecule atom h-atom)))))))))
     (values molecule (nreverse atoms))))
 
-(defparameter *aromatic-atoms* '("c" "n" "o" "p" "s" "as" "se" "*"))
+(defparameter *aromatic-atoms* '("c" "n" "o" "p" "s" "as" "se"))
+(defparameter *organic-atoms* '("B" "C" "N" "O" "P" "S" "F" "Cl" "Br" "I"))
 
 (defun aromatic-smiles-atom (string)
   (find string *aromatic-atoms* :test 'equal))
@@ -96,7 +97,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
                     charge))))
              (read-bracket-expression (stream)
                (let (isotope-number)
-                 (let ((char (peek-char nil stream)))
+                  (let ((char (peek-char nil stream)))
                    (when (digit-char-p char)
                      (setf isotope-number (read-number stream)))
                    (let* ((element-string 
@@ -181,8 +182,23 @@ of the MOLECULE class with the appropriate atoms and bonds."
                             (if lookup
                                 (list (cons :ring lookup))
                                 (list (cons :ring number))))
-                          (error 'smiles-error :description "Couldn't read number!"))))
+                          (error 'smiles-error
+                                 :description "Couldn't read number!"))))
+                   ((and (eql char #\C)
+                         (eql (peek-char nil stream nil) #\l))
+                    (read-char stream)
+                    (list
+                     (cons :atom (add-molecule-atom (get-element "Cl")))))
+                   ((and (eql char #\B)
+                         (eql (peek-char nil stream nil) #\r))
+                    (read-char stream)
+                    (list
+                     (cons :atom (add-molecule-atom (get-element "Br")))))
                    (char
+                    (unless (member (string char) *organic-atoms*
+                                    :test #'string-equal) 
+                      (error 'smiles-error
+                             :description "Unexpected element symbol"))
                     (when (aromatic-smiles-atom (coerce (list char) 'string))
                       (setf aromatic t))
                     (list (cons :atom (add-molecule-atom
@@ -252,3 +268,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
       
     (values mol)))
 
+(defun write-smiles-string (molecule stream)
+  ;;; 1. break the cycles
+  ;;; 2. find the start
+  )
