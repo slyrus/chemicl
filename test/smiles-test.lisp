@@ -77,4 +77,18 @@
  `(("CC1=CC(Br)CCC1" 175 ((:c 7) (:h 11) (:br 1)))
    ("CC1=CC(CCC1)Br" 175 ((:c 7) (:h 11) (:br 1)))))
 
+(check-smiles-strings
+ `(("c1(Cl)c(O)cc(Cl)c(Cl)c1" 197 ((:c 6) (:cl 3) (:h 3) (:o 1)))
+   ("Clc1cc(O)c(Cl)cc1Cl" 197 ((:c 6) (:cl 3) (:h 3) (:o 1)))))
+
+;;; anthracene
+(check-smiles-strings
+ `(("c1cccc2cc3ccccc3cc12" 178 ((:c 14)  (:h 10)))))
+
+;;; cubane
+(check-smiles-strings
+ `(("C12C3C4C1C5C4C3C25" 104 ((:c 8) (:h 8)))))
+
+(check-smiles-strings
+ `(("O1CCCCC1N1CCCCC1" 169 ((:c 10) (:h 19) (:n 1) (:o 1)))))
 
