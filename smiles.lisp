@@ -180,7 +180,9 @@ of the MOLECULE class with the appropriate atoms and bonds."
                       (if number
                           (let* ((lookup (gethash number ring-openings)))
                             (if lookup
-                                (list (cons :ring lookup))
+                                (progn
+                                  (setf (gethash number ring-openings) nil)
+                                  (list (cons :ring lookup)))
                                 (list (cons :ring number))))
                           (error 'smiles-error
                                  :description "Couldn't read number!"))))
@@ -224,8 +226,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
                                  (progn
                                    (add-bond mol ring last
                                              :type (get-bond-order-keyword bond-type)
-                                             :order (get-bond-order-number bond-type))
-                                   (setf (gethash ring ring-openings) nil)))))
+                                             :order (get-bond-order-number bond-type))))))
                           ((:atom :explicit-atom)
                            (let ((atom (cdr token))
                                  bond-direction)
