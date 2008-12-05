@@ -1,3 +1,4 @@
 
 1. FIXED Naked (not in []'s) Cl atoms break the parser.
 
+2. FIXED find-connected-components breaks if start is a singleton.

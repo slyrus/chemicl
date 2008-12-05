@@ -92,3 +92,33 @@
 (check-smiles-strings
  `(("O1CCCCC1N1CCCCC1" 169 ((:c 10) (:h 19) (:n 1) (:o 1)))))
 
+;;; sodium phenoxide salt
+(let ((salt (parse-smiles-string "[Na+].[O-]c1ccccc1")))
+  (assert
+   (= (length (graph:find-connected-components salt))
+      2))
+  (assert
+   (= (reduce #'+
+              (mapcar #'charge (graph:find-connected-components salt)))
+      0))  (assert
+   (= (reduce #'+
+              (mapcar
+               #'abs
+               (mapcar #'charge (graph:find-connected-components salt))))
+      2)))
+
+;;; sodium phenoxide salt with ring closure on both sides of the
+;;; separated ions
+(let ((salt (parse-smiles-string "c1cc([O-].[Na+])ccc1")))
+  (assert
+   (= (length (graph:find-connected-components salt))
+      2))
+  (assert
+   (= (reduce #'+
+              (mapcar #'charge (graph:find-connected-components salt)))
+      0))  (assert
+   (= (reduce #'+
+              (mapcar
+               #'abs
+               (mapcar #'charge (graph:find-connected-components salt))))
+      2)))
