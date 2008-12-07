@@ -122,3 +122,8 @@
                #'abs
                (mapcar #'charge (graph:find-connected-components salt))))
       2)))
+
+;;; sulfuric acid
+(check-smiles-strings
+ `(("OS(=O)(=O)O" 98 ((:h 2) (:o 4) (:s 1)))))
+
