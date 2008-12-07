@@ -55,7 +55,8 @@
            #:add-atom
            #:find-atom
            #:add-bond
-           
+           #:exact-mass
+
            #:get-normal-valence
            #:count-element
            #:count-elements
