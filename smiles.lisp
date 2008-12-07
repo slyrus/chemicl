@@ -68,7 +68,6 @@ added hydrogen ATOMs."
 (defun parse-smiles-string (string &key name (add-implicit-hydrogens t))
   "Parses a SMILES description of a molecule and returns an instance
 of the MOLECULE class with the appropriate atoms and bonds."
-  (declare (optimize (debug 3)))
   (let ((mol (apply #'make-instance 'molecule
                     (when name `(:name ,name))))
         (ring-openings (make-hash-table))
@@ -278,17 +277,20 @@ of the MOLECULE class with the appropriate atoms and bonds."
 (defun remove-edges-containing (element-identifier edge-list)
   (remove-if
    (lambda (x)
-     (member (get-element element-identifier) (graph:edge-nodes x) :key #'element))
+     (member (get-element element-identifier)
+             (graph:edge-nodes x)
+             :key #'element))
    edge-list))
 
 (defun remove-edges-not-containing (element-identifier edge-list)
   (remove-if-not
    (lambda (x)
-     (member (get-element element-identifier) (graph:edge-nodes x) :key #'element))
+     (member (get-element element-identifier)
+             (graph:edge-nodes x)
+             :key #'element))
    edge-list))
 
 (defun list< (&rest lists)
-  (declare (optimize (debug 3)))
   (let (done ret)
     (apply #'mapcar
            (lambda (&rest vals)
@@ -300,7 +302,6 @@ of the MOLECULE class with the appropriate atoms and bonds."
     ret))
 
 (defun list> (&rest lists)
-  (declare (optimize (debug 3)))
   (let (done ret)
     (apply #'mapcar
            (lambda (&rest vals)
@@ -310,6 +311,14 @@ of the MOLECULE class with the appropriate atoms and bonds."
                    (setf done t ret nil))))
            lists)
     ret))
+
+(defun find-duplicate (sequence &key (test #'eql))
+  (let ((hash (make-hash-table :test test)))
+    (map nil (lambda (x)
+               (if (gethash x hash)
+                   (return-from find-duplicate x)
+                   (setf (gethash x hash) x)))
+         sequence)))
 
 ;;; The paper "SMILES. 2. Algorithm for Generation of Unique SMILES
 ;;; Notation" allegedly contains descriptions of how to generate a
@@ -403,6 +412,37 @@ using the key "
                        (elt primes (position y atoms)))
                      (remove-atoms "H" (graph:neighbors molecule atom)))))
    atoms))
+
+(defun next-ranks (molecule atoms ranks)
+  (let ((primes (mapcar #'nth-prime ranks)))
+    (let ((product-of-primes
+           (compute-product-of-primes primes atoms molecule)))
+      (rank-order
+       (mapcar #'list ranks product-of-primes)
+       #'list<))))
+
+(defun canonicalize-atoms-1 (molecule &optional atoms ranks)
+  (let* ((atoms (or atoms (get-non-h-atoms molecule)))
+         (invariants (canon-invariants molecule atoms))
+         (ranks (or ranks (rank-order invariants #'list<))))
+    (list
+     (loop with last-ranks = ranks
+        for next-ranks = (next-ranks molecule atoms last-ranks)
+        for i below 500
+        while (not (equal next-ranks last-ranks))
+        do (setf last-ranks next-ranks)
+        finally (return (mapcar #'1+ next-ranks)))
+     atoms)))
+
+(defun canonicalize-atoms (molecule)
+  (loop  for (ranks atoms) = (canonicalize-atoms-1 molecule atoms ranks)
+     for dup = (find-duplicate ranks)
+     while dup
+     do (let ((pos (position dup ranks)))
+          (setf ranks (mapcar #'(lambda (x) (ash x 1)) ranks))
+          (decf (elt ranks pos)))
+     finally (return (list ranks atoms))))
+
 
 (defun write-smiles-string (molecule stream)
   ;;; 1. break the cycles
