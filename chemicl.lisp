@@ -42,6 +42,9 @@
           ((minusp (charge object))
            (format stream " ~S" (charge object))))))
 
+(defmethod atomic-number ((atom atom))
+  (atomic-number (element atom)))
+
 (defmethod mass ((atom atom))
   (mass (element atom)))
 
@@ -248,7 +251,7 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
       (maphash (lambda (k v)
                  (push (cons k v) l))
                element-count-hash)
-      (sort l #'< :key (lambda (x) (atomic-number (car x)))))))
+      (sort l #'string< :key (lambda (x) (id (car x)))))))
 
 (defun excess-electrons (molecule atom)
   (cond ((eql (element atom) (get-element "C"))
