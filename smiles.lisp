@@ -1,4 +1,4 @@
-;;; file: chemicl.lisp
+;;; file: smiles.lisp
 ;;;
 ;;; Copyright (c) 2008 Cyrus Harmon (ch-lisp@bobobeach.com)
 ;;; All rights reserved.
@@ -269,7 +269,143 @@ of the MOLECULE class with the appropriate atoms and bonds."
       
     (values mol)))
 
+(defun remove-atoms (element-identifier atom-list)
+  (remove
+   (get-element element-identifier)
+   atom-list
+   :key #'element))
+
+(defun remove-edges-containing (element-identifier edge-list)
+  (remove-if
+   (lambda (x)
+     (member (get-element element-identifier) (graph:edge-nodes x) :key #'element))
+   edge-list))
+
+(defun remove-edges-not-containing (element-identifier edge-list)
+  (remove-if-not
+   (lambda (x)
+     (member (get-element element-identifier) (graph:edge-nodes x) :key #'element))
+   edge-list))
+
+(defun list< (&rest lists)
+  (declare (optimize (debug 3)))
+  (let (done ret)
+    (apply #'mapcar
+           (lambda (&rest vals)
+             (unless (or done (apply #'= vals))
+               (if (apply #'< vals)
+                   (setf done t ret t)
+                   (setf done t ret nil))))
+           lists)
+    ret))
+
+(defun list> (&rest lists)
+  (declare (optimize (debug 3)))
+  (let (done ret)
+    (apply #'mapcar
+           (lambda (&rest vals)
+             (unless (or done (apply #'= vals))
+               (if (apply #'> vals)
+                   (setf done t ret t)
+                   (setf done t ret nil))))
+           lists)
+    ret))
+
+;;; The paper "SMILES. 2. Algorithm for Generation of Unique SMILES
+;;; Notation" allegedly contains descriptions of how to generate a
+;;; canonical SMILES representation of a given atom. See that paper
+;;; for details.
+(defun canon-invariant (molecule atom)
+  "Returns a so-called invariant for an atom in a molecule."
+  (let* ((bonds (graph:find-edges-containing molecule atom))
+         (non-h-bonds (remove-edges-containing "H" bonds))
+         (h-bonds (remove-edges-not-containing "H" bonds)))
+    (let ((invariant-list
+           (list
+            
+            ;; (1) number of connections. This is unclear to me. Is this the
+            ;; total number of connected atoms or the number of connected
+            ;; non-hydrogen atoms? The text would make me think the former
+            ;; but the examples suggest the latter.
+            (length non-h-bonds)
+
+            ;; (2) number of non-hydrogen bonds. Given the interpretation of
+            ;; (1), how could this be different? I think they mean the total
+            ;; bond-order of non-h bonds, that is a double bond would count 2
+            ;; for this.
+            (reduce #'+ non-h-bonds :key #'bond-order)
+
+            ;; (3) atomic number -- this one is fairly non-controversial.
+            (atomic-number atom)
+
+            ;; (4) sign of charge.  The paper says to use the sign of the
+            ;; formal charge but all of the so-called invariants are positive
+            ;; numbers (that eventually get concatenated together). I would
+            ;; think that positive numbers would get 1 for this, but the
+            ;; examples suggest otherwise. So, give negatively charged atoms
+            ;; a 1 and 0 otherwise.
+            (if (minusp (charge atom)) 1 0)
+
+            ;; (5) absolute value of the charge. again, this one seems
+            ;; straightforward.
+            (abs (charge atom))
+     
+            ;; (6) number of attached hydrogens.
+            (length h-bonds))))
+      invariant-list)))
+
+;;; to compute the canonical SMILES we're going to need to do a few
+;;; things:
+;;; 1. compute the invariants for each atom in the molecule
+;;; 2. assign a rank order to each atom
+;;; 3. convert the rank into the nth prime
+;;; 4. compute the product of the neighboring primes
+;;; 5. rank the product of the primes using the previous ranks to
+;;;    break ties
+
+(defun get-non-h-atoms (molecule &key (start (graph:first-node molecule)))
+  (let (l) 
+    (graph:dfs-map molecule (get-atom molecule start)
+                   (lambda (x)
+                     (push x l)))
+    (nreverse (remove-atoms "H" l))))
+
+(defun canon-invariants (molecule atoms)
+  (mapcar (lambda (x) 
+            (canon-invariant molecule x))
+          atoms))
+
+(defun rank-order (list predicate &key (key 'identity) (test 'equal))
+  "Returns the rank-order of the items in list sorted by predicate
+using the key "
+  (let (unique)
+    (map nil (lambda (x) (pushnew (funcall key x)
+                                  unique :test test))
+         list)
+    (let ((sorted (sort unique predicate)))
+      (mapcar (lambda (x)
+                (position (funcall key x) sorted
+                          :test test))
+              list))))
+
+(defun assign-primes (ranked-invariants)
+  (mapcar
+   (lambda (x)
+     (let ((prime (nth-prime (1- (car x)))))
+       (cons prime (cdr x))))
+   ranked-invariants))
+
+(defun compute-product-of-primes (primes atoms molecule)
+  (mapcar
+   (lambda (atom)
+     (reduce #'*
+             (mapcar (lambda (y)
+                       (elt primes (position y atoms)))
+                     (remove-atoms "H" (graph:neighbors molecule atom)))))
+   atoms))
+
 (defun write-smiles-string (molecule stream)
   ;;; 1. break the cycles
   ;;; 2. find the start
   )
+
