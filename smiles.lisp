@@ -449,29 +449,46 @@ using the key "
 (defun write-smiles-string-to-stream (molecule stream &key)
   (destructuring-bind (ranks atoms)
       (canonicalize-atoms molecule)
-    (multiple-value-bind (cycle-edge-lists
-                          cycle-node-lists
-                          removed-edge-list
-                          broken-molecule)
-        (graph:find-cycles molecule)
-      (let ((visited-atoms (make-hash-table))
-            (start (elt atoms (position 1 ranks)))
-            (rank-hash (make-hash-table))
-            (cycle-counter 1)
-            (cycle-hash (make-hash-table)))
-        (map nil (lambda (rank atom)
-                   (setf (gethash atom rank-hash) rank))
-             ranks atoms)
+    (let ((visited-atoms (make-hash-table))
+          (start (elt atoms (position 1 ranks)))
+          (rank-hash (make-hash-table))
+          (cycle-counter 1)
+          (cycle-hash (make-hash-table)))
+      (map nil (lambda (rank atom)
+                 (setf (gethash atom rank-hash) rank))
+           ranks atoms)
+      (multiple-value-bind (cycle-edge-lists
+                            cycle-node-lists
+                            removed-edge-list
+                            broken-molecule) 
+          (graph:find-cycles
+           molecule
+           :pick-function
+           (lambda (x y)
+             (cond
+               ((< (bond-order x)
+                   (bond-order y))
+                x)
+               ((> (bond-order x)
+                   (bond-order y))
+                y)
+               (t (let ((base
+                         (car (intersection
+                               (graph:edge-nodes x)
+                               (graph:edge-nodes y)))))
+                    (if (< (gethash (graph::other-edge-node x base) rank-hash)
+                           (gethash (graph::other-edge-node y base) rank-hash))
+                        y
+                        x))))))
         (labels
             ((dfs-visit (atom path)
                (setf (gethash atom visited-atoms) atom)
                (let* ((neighbors
                        (remove-if
-                        (lambda (x)
-                          (gethash x visited-atoms))
+                        (lambda (x) (gethash x visited-atoms))
                         (remove-implicit-h-atoms
-                         (graph:neighbors (or broken-molecule molecule)
-                                          atom))))
+                         (graph:neighbors
+                          (or broken-molecule molecule) atom))))
                       (count (length neighbors))
                       (i 0)
                       (cycle-edges
@@ -480,6 +497,11 @@ using the key "
                           (or (equal atom (graph:node1 edge))
                               (equal atom (graph:node2 edge))))
                         removed-edge-list)))
+                 (when path
+                   (let ((bond (graph:edgep molecule (car path) atom)))
+                     (case (bond-order bond)
+                       (2 (princ "=" stream))
+                       (3 (princ "#" stream)))))
                  (princ (id atom) stream)
                  (let (cycle-labels)
                    (map nil
@@ -498,21 +520,25 @@ using the key "
                         (lambda (cycle-label)
                           (princ cycle-label stream))
                         (sort cycle-labels #'<)))
-                 (map
-                  nil
-                  (lambda (x)
-                    (when (and (> count 1) (< i (1- count)))
-                      (princ "(" stream))
-                    (dfs-visit x (cons atom path))
-                    (when (and (> count 1) (< i (1- count)))
-                      (princ ")" stream))
-                    (incf i))
-                  (sort
-                   (remove-if
-                    (lambda (x) (gethash x visited-atoms))
-                    neighbors)
-                   #'< :key (lambda (atom)
-                              (gethash atom rank-hash)))))))
+                 (map nil
+                      (lambda (x)
+                        (when (and (> count 1) (< i (1- count)))
+                          (princ "(" stream))
+                        (dfs-visit x (cons atom path))
+                        (when (and (> count 1) (< i (1- count)))
+                          (princ ")" stream))
+                        (incf i))
+                      (sort
+                       (remove-if
+                        (lambda (x) (gethash x visited-atoms))
+                        neighbors)
+                       #'list< :key (lambda (x)
+                                      (list (atomic-number x)
+                                            (- (let ((bond (graph:edgep molecule x atom)))
+                                                  (or (bond-order bond)
+                                                      1)))
+                                            (gethash x rank-hash)
+                                            )))))))
           (dfs-visit start nil))))))
 
 (defun write-smiles-string (molecule)
