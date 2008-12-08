@@ -162,6 +162,10 @@
   (parse-smiles-string "CCC(=C(C1=CC=CC=C1)C2=CC=C(C=C2)OCCN(C)C)C3=CC=CC=C3"
                        :name "tamoxifen"))
 
+(defparameter *tamoxifen-2*
+  (parse-smiles-string "CCC(C1=CC=CC=C1)=C(C2=CC=CC=C2)C3=CC=C(OCCN(C)C)C=C3"
+                       :name "tamoxifen"))
+
 (defparameter *z-tamoxifen*
   (parse-smiles-string "CC/C(=C(\\C1=CC=CC=C1)/C2=CC=C(C=C2)OCCN(C)C)/C3=CC=CC=C3"
                        :name "z-tamoxifen"))

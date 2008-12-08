@@ -461,23 +461,19 @@ using the key "
                             cycle-node-lists
                             removed-edge-list
                             broken-molecule) 
-          (graph:find-cycles
-           molecule
+          (graph:find-cycles molecule
            :pick-function
            (lambda (x y)
              (cond
-               ((< (bond-order x)
-                   (bond-order y))
-                x)
-               ((> (bond-order x)
-                   (bond-order y))
-                y)
-               (t (let ((base
-                         (car (intersection
-                               (graph:edge-nodes x)
-                               (graph:edge-nodes y)))))
-                    (if (< (gethash (graph::other-edge-node x base) rank-hash)
-                           (gethash (graph::other-edge-node y base) rank-hash))
+               ((< (bond-order x) (bond-order y)) x)
+               ((> (bond-order x) (bond-order y)) y)
+               (t (let ((base (car (intersection
+                                    (graph:edge-nodes x)
+                                    (graph:edge-nodes y)))))
+                    (if (< (gethash (graph::other-edge-node x base)
+                                    rank-hash)
+                           (gethash (graph::other-edge-node y base)
+                                    rank-hash))
                         y
                         x))))))
         (labels
@@ -532,13 +528,17 @@ using the key "
                        (remove-if
                         (lambda (x) (gethash x visited-atoms))
                         neighbors)
-                       #'list< :key (lambda (x)
-                                      (list (atomic-number x)
-                                            (- (let ((bond (graph:edgep molecule x atom)))
-                                                  (or (bond-order bond)
-                                                      1)))
-                                            (gethash x rank-hash)
-                                            )))))))
+                       #'list<
+                       :key
+                       (lambda (x)
+                         (list
+                          (let ((bond (graph:edgep molecule x atom)))
+                            (- (if (member bond
+                                           (apply #'append cycle-edge-lists)
+                                           :test 'graph::edges-nodes-equal)
+                                   (bond-order bond)
+                                   1)))
+                          (gethash x rank-hash))))))))
           (dfs-visit start nil))))))
 
 (defun write-smiles-string (molecule)
