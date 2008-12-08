@@ -470,9 +470,9 @@ using the key "
                (t (let ((base (car (intersection
                                     (graph:edge-nodes x)
                                     (graph:edge-nodes y)))))
-                    (if (< (gethash (graph::other-edge-node x base)
+                    (if (< (gethash (graph:other-edge-node x base)
                                     rank-hash)
-                           (gethash (graph::other-edge-node y base)
+                           (gethash (graph:other-edge-node y base)
                                     rank-hash))
                         y
                         x))))))
@@ -535,7 +535,7 @@ using the key "
                           (let ((bond (graph:edgep molecule x atom)))
                             (- (if (member bond
                                            (apply #'append cycle-edge-lists)
-                                           :test 'graph::edges-nodes-equal)
+                                           :test 'graph:edges-nodes-equal)
                                    (bond-order bond)
                                    1)))
                           (gethash x rank-hash))))))))
