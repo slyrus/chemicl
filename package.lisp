@@ -61,7 +61,8 @@
            #:count-element
            #:count-elements
 
-           #:parse-smiles-string)
+           #:parse-smiles-string
+           #:write-smiles-string)
 
   (:use #:cl))
 
