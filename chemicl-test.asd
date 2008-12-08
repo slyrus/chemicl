@@ -12,4 +12,5 @@
     :test
     :components
     ((:cl-source-file "package")
-     (:cl-source-file "chemicl-test" :depends-on (package))))))
+     (:cl-source-file "chemicl-test" :depends-on (package))
+     (:cl-source-file "smiles-test" :depends-on (package))))))
