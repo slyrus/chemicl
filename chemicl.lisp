@@ -45,6 +45,9 @@
 (defmethod atomic-number ((atom atom))
   (atomic-number (element atom)))
 
+(defmethod id ((atom atom))
+  (id (element atom)))
+
 (defmethod mass ((atom atom))
   (mass (element atom)))
 

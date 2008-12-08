@@ -13,7 +13,8 @@
    (:cl-source-file "package")
    (:cl-source-file "elements" :depends-on (package))
    (:cl-source-file "chemicl" :depends-on (package elements))
-   (:cl-source-file "smiles" :depends-on (package chemicl))
+   (:cl-source-file "primes" :depends-on (package chemicl))
+   (:cl-source-file "smiles" :depends-on (package chemicl primes))
    (:static-file "COPYRIGHT")
    
    (:static-file "README")

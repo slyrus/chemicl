@@ -166,6 +166,16 @@
   (parse-smiles-string "CC/C(=C(\\C1=CC=CC=C1)/C2=CC=C(C=C2)OCCN(C)C)/C3=CC=CC=C3"
                        :name "z-tamoxifen"))
 
+(defparameter *quetiapine*
+  (parse-smiles-string "C1CN(CCN1CCOCCO)C2=NC3=CC=CC=C3SC4=CC=CC=C42"))
+
+(defparameter *morphine-simple*
+  (parse-smiles-string "CN1CCC23C4C1CC5=C2C(=C(C=C5)O)OC3C(C=C4)O"))
+
+#+nil
+(defparameter *morphine*
+  (parse-smiles-string "CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)O)O[C@H]3[C@H](C=C4)O"))
+
 (defparameter *phentermine*
   (parse-smiles-string "CC(C)(N)Cc1ccccc1"))
 
@@ -254,3 +264,42 @@
   (parse-smiles-string "C1=CC=CC=CC=C1"
                        :name "cyclotetraoctene"
                        :add-implicit-hydrogens nil))
+
+(defparameter *smilanol*
+  (parse-smiles-string "OCC(CC)CCC(CN)CN"))
+
+(defun molecule-info (molecule)
+  (format t "~&Molecular Formula ~{~{~A~A ~}~}~%"
+          (mapcar (lambda (x)
+                    (list (id (car x))
+                          (cdr x)))
+                  (count-elements molecule)))
+  (format t "~&Molecular Mass: ~A~%" (mass molecule))
+  (format t "~&Exact Mass: ~A~%" (exact-mass molecule)))
+
+(defun smiles-info (smiles)
+  (let ((molecule (parse-smiles-string smiles)))
+    (molecule-info molecule)))
+
+(molecule-info
+ (parse-smiles-string
+  "CC/C(=C(\\C1=CC=CC=C1)/C2=CC=C(C=C2)OCCN(C)C)/C3=CC=CC=C3"
+  :name "z-tamoxifen"))
+
+
+(let* ((molecule *smilanol*)
+       (atoms (get-non-h-atoms molecule))
+       (invariants (canon-invariants molecule atoms))
+       (ranks (rank-order invariants #'list<)))
+
+  (let ((primes (mapcar #'nth-prime ranks)))
+    (let ((product-of-primes
+           (compute-product-of-primes primes atoms molecule)))
+      (list
+       (mapcar
+        #'1+
+        (rank-order
+         (mapcar #'list product-of-primes ranks)
+         #'list<))
+       atoms))))
+

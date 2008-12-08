@@ -456,23 +456,48 @@ using the key "
         (graph:find-cycles molecule)
       (let ((visited-atoms (make-hash-table))
             (start (elt atoms (position 1 ranks)))
-            (rank-hash (make-hash-table)))
+            (rank-hash (make-hash-table))
+            (cycle-counter 1)
+            (cycle-hash (make-hash-table)))
         (map nil (lambda (rank atom)
                    (setf (gethash atom rank-hash) rank))
              ranks atoms)
         (labels
             ((dfs-visit (atom path)
                (setf (gethash atom visited-atoms) atom)
-               (princ (id atom) stream)
                (let* ((neighbors
                        (remove-if
                         (lambda (x)
                           (gethash x visited-atoms))
                         (remove-implicit-h-atoms
-                         (graph:neighbors (or molecule broken-molecule)
+                         (graph:neighbors (or broken-molecule molecule)
                                           atom))))
                       (count (length neighbors))
-                      (i 0))
+                      (i 0)
+                      (cycle-edges
+                       (remove-if-not
+                        (lambda (edge)
+                          (or (equal atom (graph:node1 edge))
+                              (equal atom (graph:node2 edge))))
+                        removed-edge-list)))
+                 (princ (id atom) stream)
+                 (let (cycle-labels)
+                   (map nil
+                        (lambda (cycle-edge)
+                          (let ((lookup (gethash cycle-edge
+                                                 cycle-hash)))
+                            (if lookup
+                                (push lookup cycle-labels)
+                                (progn
+                                  (push cycle-counter cycle-labels)
+                                  (setf (gethash cycle-edge cycle-hash)
+                                        cycle-counter)
+                                  (incf cycle-counter)))))
+                        cycle-edges)
+                   (map nil
+                        (lambda (cycle-label)
+                          (princ cycle-label stream))
+                        (sort cycle-labels #'<)))
                  (map
                   nil
                   (lambda (x)

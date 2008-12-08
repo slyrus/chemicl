@@ -30,11 +30,12 @@
 (defconstant +nth-prime-limit+ 2500)
 (defconstant +nth-prime+ 22343)
 
-(let ((primes (primes-up-to-n +nth-prime+)))
-  (defparameter *nth-prime-vector*
-    (make-array (length primes)
-                :element-type '(unsigned-byte 32)
-                :initial-contents primes)))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (let ((primes (primes-up-to-n +nth-prime+)))
+    (defparameter *nth-prime-vector*
+      (make-array (length primes)
+                  :element-type '(unsigned-byte 32)
+                  :initial-contents primes))))
 
 (defun nth-prime (n)
   (when (>= n (length *nth-prime-vector*))
