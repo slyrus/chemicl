@@ -41,7 +41,6 @@ added hydrogen ATOMs."
   (let ((hydrogen-count (count-element molecule "H"))
         atoms)
     (graph:map-nodes
-     molecule
      (lambda (atom)
        (unless (member atom exclude-list)
          (let* ((order (atom-bond-order molecule atom))
@@ -56,7 +55,8 @@ added hydrogen ATOMs."
                  (let ((h-atom (add-atom molecule 1 
                                          (format nil "H~A" (incf hydrogen-count)))))
                    (push h-atom atoms)
-                   (add-bond molecule atom h-atom)))))))))
+                   (add-bond molecule atom h-atom))))))))
+     molecule)
     (values molecule (nreverse atoms))))
 
 (defparameter *aromatic-atoms* '("c" "n" "o" "p" "s" "as" "se"))
@@ -257,7 +257,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
     
     #+nil 
     (multiple-value-bind (bonds cycles cycles-removed-mol)
-        (graph:find-cycles mol)
+        (graph:break-cycles mol)
       (print bonds)
       (print cycles)
       
@@ -447,6 +447,7 @@ using the key "
   (remove-atoms "H" list))
 
 (defun write-smiles-string-to-stream (molecule stream &key)
+  (declare (optimize (debug 2)))
   (destructuring-bind (ranks atoms)
       (canonicalize-atoms molecule)
     (let ((visited-atoms (make-hash-table))
@@ -461,7 +462,7 @@ using the key "
                             cycle-node-lists
                             removed-edge-list
                             broken-molecule) 
-          (graph:find-cycles molecule
+          (graph:break-cycles molecule
            :pick-function
            (lambda (x y)
              (cond
@@ -477,7 +478,13 @@ using the key "
                         y
                         x))))))
         (labels
-            ((dfs-visit (atom path)
+            ((print-atom (atom)
+               (princ (id atom) stream))
+             (print-bond (bond)
+               (case (bond-order bond)
+                 (2 (princ "=" stream))
+                 (3 (princ "#" stream))))
+             (dfs-visit (atom path)
                (setf (gethash atom visited-atoms) atom)
                (let* ((neighbors
                        (remove-if
@@ -495,27 +502,33 @@ using the key "
                         removed-edge-list)))
                  (when path
                    (let ((bond (graph:edgep molecule (car path) atom)))
-                     (case (bond-order bond)
-                       (2 (princ "=" stream))
-                       (3 (princ "#" stream)))))
-                 (princ (id atom) stream)
-                 (let (cycle-labels)
+                     (print-bond bond)))
+                 (print-atom atom)
+                 (let (cycle-openings cycle-closings)
                    (map nil
                         (lambda (cycle-edge)
-                          (let ((lookup (gethash cycle-edge
-                                                 cycle-hash)))
+                          (let ((lookup (gethash cycle-edge cycle-hash)))
                             (if lookup
-                                (push lookup cycle-labels)
+                                (push (cons lookup cycle-edge) cycle-closings)
                                 (progn
-                                  (push cycle-counter cycle-labels)
+                                  (push (cons cycle-counter cycle-edge) cycle-openings)
                                   (setf (gethash cycle-edge cycle-hash)
                                         cycle-counter)
                                   (incf cycle-counter)))))
                         cycle-edges)
                    (map nil
-                        (lambda (cycle-label)
-                          (princ cycle-label stream))
-                        (sort cycle-labels #'<)))
+                        (lambda (list)
+                          (destructuring-bind (cycle-label . cycle-edge)
+                              list
+                            (princ cycle-label stream)))
+                        (sort cycle-openings #'< :key #'car))
+                   (map nil
+                        (lambda (list)
+                          (destructuring-bind (cycle-label . cycle-edge)
+                              list
+                            (print-bond cycle-edge)
+                            (princ cycle-label stream)))
+                        (sort cycle-closings #'< :key #'car)))
                  (map nil
                       (lambda (x)
                         (when (and (> count 1) (< i (1- count)))

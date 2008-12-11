@@ -158,11 +158,12 @@
 (defparameter *pyrrole* (parse-smiles-string "[nH]1cccc1"
                                              :name "pyrrole"))
 
+#+nil
 (defparameter *tamoxifen*
   (parse-smiles-string "CCC(=C(C1=CC=CC=C1)C2=CC=C(C=C2)OCCN(C)C)C3=CC=CC=C3"
                        :name "tamoxifen"))
 
-(defparameter *tamoxifen-2*
+(defparameter *tamoxifen*
   (parse-smiles-string "CCC(C1=CC=CC=C1)=C(C2=CC=CC=C2)C3=CC=C(OCCN(C)C)C=C3"
                        :name "tamoxifen"))
 
@@ -173,11 +174,11 @@
 (defparameter *quetiapine*
   (parse-smiles-string "C1CN(CCN1CCOCCO)C2=NC3=CC=CC=C3SC4=CC=CC=C42"))
 
-(defparameter *morphine-simple*
+(defparameter *morphine*
   (parse-smiles-string "CN1CCC23C4C1CC5=C2C(=C(C=C5)O)OC3C(C=C4)O"))
 
 #+nil
-(defparameter *morphine*
+(defparameter *morphine-isomeric*
   (parse-smiles-string "CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)O)O[C@H]3[C@H](C=C4)O"))
 
 (defparameter *phentermine*
@@ -306,4 +307,7 @@
          (mapcar #'list product-of-primes ranks)
          #'list<))
        atoms))))
+
+(defparameter *tamoxifen-inchi*
+  "InChI=1/C26H29NO/c1-4-25(21-11-7-5-8-12-21)26(22-13-9-6-10-14-22)23-15-17-24(18-16-23)28-20-19-27(2)3/h5-18H,4,19-20H2,1-3H3/b26-25-")
 

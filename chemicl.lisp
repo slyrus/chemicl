@@ -214,23 +214,23 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
 
 (defmethod mass ((molecule molecule))
   (let ((mass 0.0d0))
-    (graph:map-nodes molecule
-             (lambda (atom)
-               (incf mass (mass atom))))
+    (graph:map-nodes (lambda (atom)
+                       (incf mass (mass atom)))
+                     molecule)
     mass))
 
 (defmethod exact-mass ((molecule molecule))
   (let ((exact-mass 0.0d0))
-    (graph:map-nodes molecule
-             (lambda (atom)
-               (incf exact-mass (exact-mass atom))))
+    (graph:map-nodes (lambda (atom)
+                       (incf exact-mass (exact-mass atom)))
+                     molecule)
     exact-mass))
 
 (defmethod charge ((molecule molecule))
   (let ((charge 0))
-    (graph:map-nodes molecule
-             (lambda (atom)
-               (incf charge (charge atom))))
+    (graph:map-nodes (lambda (atom)
+                       (incf charge (charge atom)))
+                     molecule)
     charge))
 
 (defun count-element (molecule element-id)
