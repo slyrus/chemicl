@@ -77,6 +77,9 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
                    :initform (make-hash-table :test 'equal)))
   (:documentation "A class for representing molecules."))
 
+(defun make-molecule (&rest args)
+  (apply #'make-instance 'molecule args))
+
 (defmethod graph:copy-graph ((graph molecule) &key copy-edges)
   (declare (ignore copy-edges))
   (let ((new-graph (call-next-method)))
@@ -86,6 +89,10 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
       (setf (atom-name-hash new-graph)
             (alexandria:copy-hash-table (atom-name-hash graph))))
     new-graph))
+
+(defgeneric copy-molecule (molecule)
+  (:method ((molecule molecule))
+    (graph:copy-graph molecule)))
 
 (defgeneric get-atom (molecule atom-identifier)
   (:method ((molecule molecule) (atom atom))
@@ -122,6 +129,12 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
   (:method ((molecule molecule))
     (graph:node-count molecule))
   (:documentation "Returns the number of atoms in molecule."))
+
+(defun map-atoms (fn molecule)
+  (graph:map-nodes fn molecule))
+
+(defun map-atoms->list (fn molecule)
+  (graph:map-nodes->list fn molecule))
 
 (defparameter *bond-orders* 
   '((:single . 1)
@@ -177,6 +190,10 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
 (defgeneric add-bond (molecule atom-identifier-1 atom-identifier-2
                                &key type order direction))
 
+(defgeneric remove-bond (molecule atom-or-bond &rest args))
+
+(defgeneric find-bonds-containing (molecule atom))
+
 (defmethod add-bond ((molecule molecule) atom-identifier-1 atom-identifier-2
                      &key (type :single) (order 1) direction)
   (let ((atom-1 (get-atom molecule atom-identifier-1))
@@ -191,6 +208,19 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
       (graph:add-edge molecule bond)
       bond)))
 
+(defmethod remove-bond ((molecule molecule) (atom-identifier-1 atom) &rest args)
+  (destructuring-bind (atom-identifier-2)
+      args
+    (graph:remove-edge-between-nodes molecule atom-identifier-1 atom-identifier-2)))
+
+(defmethod remove-bond ((molecule molecule) (bond bond) &rest args)
+  (declare (ignore args))
+  (graph:remove-edge molecule bond))
+
+(defmethod find-bonds-containing ((molecule molecule) (atom atom))
+  (graph:find-edges-containing molecule atom))
+
+
 (defun double-bond-configuration (molecule bond)
   (let ((atom1 (graph:node1 bond))
         (atom2 (graph:node2 bond)))
@@ -199,9 +229,6 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
           (atom2-bonds
            (remove bond (graph:find-edges-containing molecule atom2))))
       (cons atom1-bonds atom2-bonds))))
-
-(defun make-molecule (&rest args)
-  (apply #'make-instance 'molecule args))
 
 (defun remove-keyword-args (keywords list)
   (if (listp keywords)

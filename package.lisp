@@ -44,7 +44,7 @@
            #:mass
            #:electronegativity
            #:charge
-
+           
            #:get-element
 
            #+nil #:atom
@@ -52,11 +52,19 @@
 
            #:molecule
            #:make-molecule
+           #:copy-molecule
            #:add-atom
            #:find-atom
-           #:add-bond
-           #:exact-mass
+           #:remove-atom
+           #:map-atoms
+           #:map-atoms->list
 
+           #:bond
+           #:add-bond
+           #:remove-bond
+           #:find-bonds-containing
+
+           #:exact-mass
            #:get-normal-valence
            #:count-element
            #:count-elements
