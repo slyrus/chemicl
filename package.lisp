@@ -69,6 +69,7 @@
            #:get-normal-valence
            #:count-element
            #:count-elements
+           #:molecular-formula
 
            #:parse-smiles-string
            #:write-smiles-string)

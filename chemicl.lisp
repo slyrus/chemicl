@@ -283,6 +283,13 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
                element-count-hash)
       (sort l #'string< :key (lambda (x) (id (car x)))))))
 
+(defun molecular-formula (molecule)
+  (format nil "~{~{~A~A~}~}"
+          (mapcar (lambda (x)
+                    (list (id (car x))
+                          (cdr x)))
+                  (count-elements molecule))))
+
 (defun excess-electrons (molecule atom)
   (cond ((eql (element atom) (get-element "C"))
          (if (< (atom-bond-order molecule atom) 4) 1 0))
