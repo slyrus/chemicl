@@ -49,6 +49,7 @@
 
            #+nil #:atom
            #:make-atom
+           #:atom-name
 
            #:molecule
            #:make-molecule
