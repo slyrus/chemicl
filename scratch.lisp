@@ -90,11 +90,6 @@
                    (format nil "H~A" i)))
     mol))
 
-(find-atom *benzene* "C1")
-(graph:find-edges-containing *benzene* (find-atom *benzene* "C1"))
-(atom-bond-order *benzene* "C1")
-(atom-bond-order *benzene* "H1")
-
 (defparameter *cyclohexane-manual*
   (let ((mol (make-molecule :name "cyclohexane")))
     (add-atom mol 6 "C1")
