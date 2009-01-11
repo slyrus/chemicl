@@ -1,6 +1,6 @@
 ;;; file: chemicl.lisp
 ;;;
-;;; Copyright (c) 2008 Cyrus Harmon (ch-lisp@bobobeach.com)
+;;; Copyright (c) 2008-2009 Cyrus Harmon (ch-lisp@bobobeach.com)
 ;;; All rights reserved.
 ;;;
 ;;; Redistribution and use in source and binary forms prohibited.
@@ -312,3 +312,104 @@ aromatic or not."
 
 (defclass tetrahedral-center
     (spatial-arrangement) ())
+
+;;;; Hanser Ring Perception Algorithm
+
+;;; For details see:
+;;; Th. Hanser, Ph. Jauffret, and G. Kaufmann
+;;; A New Algorithm for Exhaustive Ring Perception in a Molecular Graph 
+;;; J. Chem. Inf. Comput. Sci. 1996, 36, 1146-1152 
+
+(defun remove-h-atoms (molecule)
+  (let ((copy (copy-molecule molecule)))
+    ;; for new let's just remove all hydrogens attached to carbons
+    (map-atoms
+     (lambda (atom)
+       (when (equal (id (element atom)) "C")
+         (map nil
+              (lambda (bond)
+                (let ((other (graph:other-edge-node bond atom)))
+                  (when (equal (id (element other)) "H")
+                    (remove-bond copy bond))
+                  (let ((other-edges (find-bonds-containing
+                                      copy other)))
+                    (when (null other-edges)
+                      (remove-atom copy other)))))
+              (find-bonds-containing copy atom))))
+     copy)
+    copy))
+
+(defun pairs (list)
+  (loop for x on list
+     append (loop with y = (car x)
+               for z in (cdr x)
+               collect (list y z))))
+
+(defun hanser-rings (graph)
+  (declare (optimize (debug 2)))
+  (let (rings
+        (edge-hash (make-hash-table)))
+    (labels ((append-paths (graph p1 p2 x)
+               (if (> (length p2) (length p1))
+                   (rotatef p1 p2))
+               (cond ((eql x (car p1))
+                      (append (remove x p2
+                                      :test (graph::graph-node-test graph))
+                              (list x)
+                              (remove x p1
+                                      :test (graph::graph-node-test graph))))
+                     (t 
+                      (append (remove x p1
+                                      :test (graph::graph-node-test graph))
+                              (list x)
+                              (remove x p2
+                                      :test (graph::graph-node-test graph))))))
+             (hanser-convert (graph)
+               (let ((graph (graph:copy-graph graph)))
+                 (graph:bfs-map-edges 
+                  graph (graph:first-node graph)
+                  (lambda (edge)
+                    (setf (gethash edge edge-hash)
+                          (list (graph:node1 edge)
+                                (graph:node2 edge)))))
+                 graph))
+             (hanser-remove (graph x)
+               (let ((x-edges (graph:find-edges-containing graph x)))
+                 (loop for (first second)
+                    in (pairs (remove-if
+                               (lambda (edge)
+                                 (graph::self-edge-p graph edge))
+                               x-edges))
+                    do
+                    (let ((new-edge
+                           (graph:add-edge-between-nodes
+                            graph
+                            (graph:other-edge-node first x)
+                            (graph:other-edge-node second x))))
+                      (print (cons 'new new-edge))
+                      (setf (gethash new-edge edge-hash) 
+                            (let ((p1 (gethash first edge-hash))
+                                  (p2 (gethash second edge-hash)))
+                              (print (append-paths graph p1 p2 x))))))
+                 (loop for path in (graph:find-edges-containing graph x)
+                    do 
+                      (when (funcall (graph::graph-node-test graph)
+                                     (graph:node1 path)
+                                     (graph:node2 path))
+                        (print (cons 'ring (gethash path edge-hash)))
+                        (push (gethash path edge-hash) rings))
+                      (graph:remove-edge graph path)))
+               (graph:remove-node graph x)))
+      (do ((v (hanser-convert graph)))
+          ((zerop (print (graph:node-count v))))
+        (hanser-remove v (car (sort (graph:map-nodes->list #'identity v)
+                                    #'<
+                                    :key (lambda (node)
+                                           (length (graph:neighbors v node)))))) 
+       rings))
+    #+nil 
+    (maphash (lambda (k v)
+               (print v))
+             edge-hash)
+    rings))
+
