@@ -28,7 +28,7 @@
 
 (defmethod print-object ((object atom) stream)
   (print-unreadable-object (object stream :type t :identity t)
-    (format stream " ~S" 
+    (format stream " ~S"
             (if (slot-boundp object 'element)
                 (when (element object)
                   (if (> *atom-print-verbosity* 0)
@@ -136,7 +136,7 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
 (defun map-atoms->list (fn molecule)
   (graph:map-nodes->list fn molecule))
 
-(defparameter *bond-orders* 
+(defparameter *bond-orders*
   '((:single . 1)
     (:aromatic . 1.5)
     (:double . 2)
@@ -159,13 +159,13 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
 
 (defmethod graph:copy-edge ((object bond))
   (let ((new-edge (call-next-method)))
-    (setf (bond-type new-edge) (bond-type object) 
-          (bond-order new-edge) (bond-order object) 
+    (setf (bond-type new-edge) (bond-type object)
+          (bond-order new-edge) (bond-order object)
           (bond-direction new-edge) (bond-direction object))
     new-edge))
 
 (defmethod graph:print-edge-data :after ((object bond) stream)
-  (format stream " ~S ~S" 
+  (format stream " ~S ~S"
           (if (slot-boundp object 'type)
               (bond-type object)
               "Type: unbound")
@@ -317,8 +317,8 @@ aromatic or not."
 
 ;;; For details see:
 ;;; Th. Hanser, Ph. Jauffret, and G. Kaufmann
-;;; A New Algorithm for Exhaustive Ring Perception in a Molecular Graph 
-;;; J. Chem. Inf. Comput. Sci. 1996, 36, 1146-1152 
+;;; A New Algorithm for Exhaustive Ring Perception in a Molecular Graph
+;;; J. Chem. Inf. Comput. Sci. 1996, 36, 1146-1152
 
 (defun pairs (list)
   (loop for x on list
@@ -348,12 +348,12 @@ aromatic or not."
                                       graph
                                       (graph:other-edge-node first x)
                                       (graph:other-edge-node second x))))
-                       (setf (gethash new-edge edge-hash) 
+                       (setf (gethash new-edge edge-hash)
                              (append-paths (gethash first edge-hash)
                                            (gethash second edge-hash)
                                            x))))
                (loop for path in (graph:find-edges-containing graph x)
-                  do (when (graph:self-edge-p graph path) 
+                  do (when (graph:self-edge-p graph path)
                        (push (gethash path edge-hash) rings))
                   (graph:remove-edge graph path))
                (graph:remove-node graph x)))
