@@ -326,7 +326,6 @@ aromatic or not."
                collect (cons y z))))
 
 (defun hanser-rings (graph)
-  (declare (optimize (debug 2)))
   (let ((edge-hash (make-hash-table))
         (graph (graph:copy-graph graph))
         rings)
@@ -355,11 +354,10 @@ aromatic or not."
                (loop for path in (graph:find-edges-containing graph x)
                   do (when (graph:self-edge-p graph path)
                        (push (gethash path edge-hash) rings))
-                  (graph:remove-edge graph path))
+                    (graph:remove-edge graph path))
                (graph:remove-node graph x)))
       (map nil #'hanser-remove
            (sort (graph:graph-nodes graph)
-                 #'<
-                 :key (lambda (node)
-                        (length (graph:neighbors graph node))))))
+                 #'< :key (lambda (node)
+                            (length (graph:neighbors graph node))))))
     rings))
