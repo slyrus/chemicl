@@ -306,3 +306,42 @@
 (defparameter *tamoxifen-inchi*
   "InChI=1/C26H29NO/c1-4-25(21-11-7-5-8-12-21)26(22-13-9-6-10-14-22)23-15-17-24(18-16-23)28-20-19-27(2)3/h5-18H,4,19-20H2,1-3H3/b26-25-")
 
+
+
+
+(defparameter *graph* 
+  (let ((g (graph:make-graph :node-test 'equal)))
+    (loop for i from 1 below 12
+       do (graph:add-node g (concatenate 'string "Node " (princ-to-string i))))
+
+    (graph:add-edge-between-nodes g "Node 5" "Node 1")
+    (graph:add-edge-between-nodes g "Node 1" "Node 2")
+    (graph:add-edge-between-nodes g "Node 2" "Node 3")
+    (graph:add-edge-between-nodes g "Node 3" "Node 4")
+    (graph:add-edge-between-nodes g "Node 4" "Node 2")
+    g))
+
+(defparameter *graph-2* 
+  (let ((g (graph:make-graph :node-test 'equal)))
+    (mapcar (lambda (x) (graph:add-node g x))
+            '(:a :b :c :d :e :f :g :h :i :j :k :l :m :n :o :p))
+    (graph:add-edge-between-nodes g :a :b)
+    (graph:add-edge-between-nodes g :b :c)
+    (graph:add-edge-between-nodes g :b :d)
+    (graph:add-edge-between-nodes g :d :e)
+    (graph:add-edge-between-nodes g :e :f)
+    (graph:add-edge-between-nodes g :f :g)
+    (graph:add-edge-between-nodes g :g :e)
+    (graph:add-edge-between-nodes g :d :h)
+    (graph:add-edge-between-nodes g :h :i)
+    (graph:add-edge-between-nodes g :i :j)
+    (graph:add-edge-between-nodes g :j :m)
+    (graph:add-edge-between-nodes g :m :n)
+    (graph:add-edge-between-nodes g :n :o)
+    (graph:add-edge-between-nodes g :o :p)
+    (graph:add-edge-between-nodes g :p :l)
+    (graph:add-edge-between-nodes g :l :m)
+    (graph:add-edge-between-nodes g :l :k)
+    (graph:add-edge-between-nodes g :k :h)
+    g))
+
