@@ -326,6 +326,7 @@ aromatic or not."
                collect (cons y z))))
 
 (defun hanser-rings (graph)
+  "Returns a list of condensed cycles contained in the graph."
   (let ((edge-hash (make-hash-table))
         (graph (graph:copy-graph graph))
         rings)
