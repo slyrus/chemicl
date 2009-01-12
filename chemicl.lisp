@@ -334,23 +334,33 @@ aromatic or not."
                      graph)
     (labels ((append-paths (p1 p2 x)
                (when (> (length p2) (length p1)) (rotatef p1 p2))
-               (if (eql x (car p1))
-                   (append (graph:node-remove graph x p2)
-                           (cons x (graph:node-remove graph x p1)))
-                   (append (graph:node-remove graph x p1)
-                           (cons x (graph:node-remove graph x p2)))))
+               (let ((l (if (eql x (car p1))
+                            (append
+                             (graph:node-remove graph x p2)
+                             (cons x (graph:node-remove graph x p1)))
+                            (append
+                             (graph:node-remove graph x p1)
+                             (cons x (graph:node-remove graph x p2))))))
+                 ;; if there is a duplicate (other than the last
+                 ;; node), then this isn't a "real" path and we can
+                 ;; ignore it.
+                 (unless (find-duplicate (butlast l))
+                   l)))
              (hanser-remove (x)
                (loop for (first . second)
-                  in (pairs (remove-if (lambda (edge) (graph:self-edge-p graph edge))
-                                       (graph:find-edges-containing graph x)))
-                  do (let ((new-edge (graph:add-edge-between-nodes
-                                      graph
-                                      (graph:other-edge-node first x)
-                                      (graph:other-edge-node second x))))
-                       (setf (gethash new-edge edge-hash)
-                             (append-paths (gethash first edge-hash)
-                                           (gethash second edge-hash)
-                                           x))))
+                  in (pairs (remove-if
+                             (lambda (edge) (graph:self-edge-p graph edge))
+                             (graph:find-edges-containing graph x)))
+                  do 
+                    (let ((path (append-paths (gethash first edge-hash)
+                                              (gethash second edge-hash)
+                                              x)))
+                      (when path
+                        (let ((new-edge (graph:add-edge-between-nodes
+                                         graph
+                                         (graph:other-edge-node first x)
+                                         (graph:other-edge-node second x))))
+                          (setf (gethash new-edge edge-hash) path)))))
                (loop for path in (graph:find-edges-containing graph x)
                   do (when (graph:self-edge-p graph path)
                        (push (gethash path edge-hash) rings))
