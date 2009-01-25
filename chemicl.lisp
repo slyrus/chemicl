@@ -130,11 +130,8 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
     (graph:node-count molecule))
   (:documentation "Returns the number of atoms in molecule."))
 
-(defun map-atoms (fn molecule)
-  (graph:map-nodes fn molecule))
-
-(defun map-atoms->list (fn molecule)
-  (graph:map-nodes->list fn molecule))
+(setf (fdefinition 'map-atoms) #'graph:map-nodes)
+(setf (fdefinition 'map-atoms->list) #'graph:map-nodes->list)
 
 (defparameter *bond-orders*
   '((:single . 1)
@@ -156,6 +153,9 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
   ((type :accessor bond-type :initarg :type :initform :single)
    (order :accessor bond-order :initarg :order :initform 1)
    (direction :accessor bond-direction :initarg :direction :initform nil)))
+
+(setf (fdefinition 'map-bonds) #'graph:map-edges)
+(setf (fdefinition 'map-bonds->list) #'graph:map-edges->list)
 
 (defmethod graph:copy-edge ((object bond))
   (let ((new-edge (call-next-method)))
