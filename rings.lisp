@@ -33,7 +33,6 @@
                                           (graph:edge-nodes edge)))
                      graph)
     (labels ((append-paths (p1 p2 x)
-               (print (list 'append-path p1 p2 x))
                (when (> (length p2) (length p1)) (rotatef p1 p2))
                (let ((l (cond ((and (equal x (car p1))
                                     (equal x (car p2)))
@@ -129,7 +128,6 @@ only the minimal rings."
     (loop for (ring . rest) on (sort (copy-list rings) #'< :key #'length)
        do 
        (let ((ring-node (make-instance 'ring-node :nodes ring)))
-         (print (cons 'ring ring-node))
          (graph:add-node ring-graph ring-node)
          (map nil
               (lambda (node)
