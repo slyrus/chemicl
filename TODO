@@ -1,0 +1,25 @@
+
+1. SMILES
+
+1.1. Configuration around double bonds
+
+This basically works, but we're not storing the information in the
+cleanest way. Currently, we just ape the SMILES bond info. We might
+want to do something smarter here.
+
+1.2. Chiral centers
+
+1.3. Canonicalization
+
+1.4. DONE - Wildcard "atoms"
+
+This should be working. Tests to verify this would be nice.
+
+1.5. SMILES Aromaticity Rules
+
+The SMILES aromaticity stuff is kind of a mess, but we need to support
+it, at the very least for canonicalization (and for proper
+visualization and searching, at some point). Currently we don't really
+do anything here.
+
+
