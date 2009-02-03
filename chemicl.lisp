@@ -114,14 +114,17 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
   or a string or symbol whose value is the two letter elemental symbol
   of the desired element."))
 
+(defmethod graph:remove-node ((molecule molecule) (atom atom))
+  (map nil
+       (lambda (edge) (graph:remove-edge molecule edge))
+       (graph:find-edges-containing molecule atom))
+  (when (atom-name atom)
+    (remhash (atom-name atom) (atom-name-hash molecule)))
+  (call-next-method molecule atom))
+
 (defgeneric remove-atom (molecule atom)
   (:method ((molecule molecule) (atom atom))
-    (map nil
-         (lambda (edge) (graph:remove-edge molecule edge))
-         (graph:find-edges-containing molecule atom))
-    (graph:remove-node molecule atom)
-    (remhash (atom-name atom) (atom-name-hash molecule))
-    atom)
+    (graph:remove-node molecule atom))
   (:documentation "Removes the atom (and any edges containing it) from
   molecule."))
 
