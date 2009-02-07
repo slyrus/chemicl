@@ -37,9 +37,9 @@
                (let ((l (cond ((and (equal x (car p1))
                                     (equal x (car p2)))
                                (append
-                                (graph:node-remove graph x p2)
-                                (graph:node-remove graph x p1)
-                                (list x)))
+                                (reverse (graph:node-remove graph x p2))
+                                (list x)
+                                (graph:node-remove graph x p1)))
                               ((eql x (car p1))
                                (append
                                 (graph:node-remove graph x p2)
