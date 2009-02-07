@@ -408,5 +408,47 @@
     (graph:add-edge-between-nodes g 5 8)
     g))
 
+(defparameter *graph-6* 
+  (let ((g (graph:make-graph :node-test 'equal)))
+    (mapcar (lambda (x) (graph:add-node g x))
+            '(1 2 3 4))
+    (graph:add-edge-between-nodes g 1 2)
+    (graph:add-edge-between-nodes g 2 3)
+    (graph:add-edge-between-nodes g 3 4)
+    (graph:add-edge-between-nodes g 1 4)
+    g))
+
+(defparameter *graph-7* 
+  (let ((g (graph:make-graph :node-test 'equal)))
+    (mapcar (lambda (x) (graph:add-node g x))
+            '(1 2 3))
+    (graph:add-edge-between-nodes g 1 2)
+    (graph:add-edge-between-nodes g 2 3)
+    (graph:add-edge-between-nodes g 1 3)
+    
+    g))
+
+(defparameter *graph-8* 
+  (let ((g (graph:make-graph :node-test 'equal)))
+    (mapcar (lambda (x) (graph:add-node g x))
+            '(1 2 3 4))
+    (graph:add-edge-between-nodes g 1 2)
+    (graph:add-edge-between-nodes g 2 3)
+    (graph:add-edge-between-nodes g 1 3)
+    (graph:add-edge-between-nodes g 3 4)
+    
+    g))
+
+(defparameter *graph-8b*
+  (let ((g (graph:make-graph :node-test 'equal)))
+    (mapcar (lambda (x) (graph:add-node g x))
+            '(1 2 3 4))
+    (graph:add-edge-between-nodes g 1 2)
+    (graph:add-edge-between-nodes g 2 3)
+    (graph:add-edge-between-nodes g 3 1)
+    (graph:add-edge-between-nodes g 3 4)
+    
+    g))
+
 (mapcar #'find-duplicate
         (mapcar #'butlast (hanser-rings *graph-3*)))
