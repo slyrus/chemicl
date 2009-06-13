@@ -28,7 +28,7 @@
 
 (defmethod print-object ((object atom) stream)
   (print-unreadable-object (object stream :type t :identity t)
-    (format stream " ~S"
+    (format stream "~S"
             (if (slot-boundp object 'element)
                 (when (element object)
                   (if (> *atom-print-verbosity* 0)
