@@ -10,9 +10,7 @@
 (defsystem :chemicl-doc
   :name "chemicl-doc"
   :author "Cyrus Harmon" 
-  :version #.(with-open-file
-                 (vers (merge-pathnames "version.lisp-expr" *load-truename*))
-               (read vers))
+  :version "0.0.1"
   :depends-on (ch-asdf smarkup)
   :components
   ((:module

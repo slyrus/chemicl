@@ -2,9 +2,7 @@
 (asdf:defsystem :chemicl-test
   :name "chemicl-test"
   :author "Cyrus Harmon <ch-lisp@bobobeach.com>"
-  :version #.(with-open-file
-                 (vers (merge-pathnames "version.lisp-expr" *load-truename*))
-               (read vers))
+  :version "0.0.1"
   :licence "For Internal Use Only"
   :depends-on (chemicl)
   :components

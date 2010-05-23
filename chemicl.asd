@@ -2,9 +2,7 @@
 (asdf:defsystem #:chemicl
   :name "chemicl"
   :author "Cyrus Harmon <ch-lisp@bobobeach.com>"
-  :version #.(with-open-file
-                 (vers (merge-pathnames "version.lisp-expr" *load-truename*))
-               (read vers))
+  :version "0.0.1"
   :licence "For Internal Use Only"
   :description "A library for representing chemical structures"
   :depends-on (cxml cxml-stp epigraph)
