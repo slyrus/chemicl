@@ -7,8 +7,7 @@
   :description "A library for representing chemical structures"
   :depends-on (cxml cxml-stp epigraph)
   :components
-  ((:static-file "version" :pathname #p"version.lisp-expr")
-   (:cl-source-file "package")
+  ((:cl-source-file "package")
    (:cl-source-file "util" :depends-on (package))
    (:cl-source-file "elements" :depends-on (package))
    (:cl-source-file "chemicl" :depends-on (package util elements))
