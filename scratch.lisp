@@ -153,6 +153,15 @@
 (defparameter *pyrrole* (parse-smiles-string "[nH]1cccc1"
                                              :name "pyrrole"))
 
+(defparameter *alanine* (parse-smiles-string "CC(C(=O)O)N"
+                                             :name "alanine"))
+
+(defparameter *l-alanine* (parse-smiles-string "C[C@@H](C(=O)O)N"
+                                               :name "l-alanine"))
+
+(defparameter |*e-1,2-difluoroethene*| (parse-smiles-string "F/C=C/F"
+                                                            :name "e-1,2-difluoroethene"))
+
 #+nil
 (defparameter *tamoxifen*
   (parse-smiles-string "CCC(=C(C1=CC=CC=C1)C2=CC=C(C=C2)OCCN(C)C)C3=CC=CC=C3"
