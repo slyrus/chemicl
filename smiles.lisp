@@ -74,8 +74,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
         (element-count (make-hash-table))
         first-atom
         explicit-atoms
-        aromatic
-        chirality)
+        aromatic)
     (labels ((read-number (stream)
                (parse-integer
                 (coerce (loop for digit = (read-char stream)
@@ -89,7 +88,8 @@ of the MOLECULE class with the appropriate atoms and bonds."
                   (let ((digit (digit-char-p next-char)))
                     (when digit (read-number stream)))
                   (let ((charge 1))
-                    (when (eql next-char charge-char)
+                    (when (and (not (char-equal next-char #\]))
+                               (eql next-char charge-char))
                       (loop for char = (read-char stream)
                          do (incf charge)
                          while (eql charge-char (peek-char nil stream))))
@@ -115,30 +115,48 @@ of the MOLECULE class with the appropriate atoms and bonds."
                      (when isotope-number
                        (let ((isotope (get-isotope (element atom) isotope-number)))
                          (setf (isotope atom) isotope)))
-                     (let ((char (peek-char nil stream)))
-                       (cond ((eq char #\]))
-                             ((char-equal char #\H)
-                              (read-char stream)
-                              (let ((count
-                                     (if (digit-char-p
-                                          (peek-char nil stream)) 
-                                         (read-number stream) 
-                                         1)))
-                                (dotimes (i count)
-                                  (let ((h (add-molecule-atom (get-element "H"))))
-                                    (add-bond mol atom h)))))))
-                     (let ((char (peek-char nil stream)))
-                       (cond ((eq char #\]) (read-char stream))
-                             ((eq char #\-)
-                              (read-char stream)
-                              (let ((charge (- (read-charge stream #\-))))
-                                (setf (charge atom) charge))
-                              (read-char stream))
-                             ((eq char #\+)
-                              (read-char stream)
-                              (let ((charge (read-charge stream #\+)))
-                                (setf (charge atom) charge))
-                              (read-char stream))))
+                     (loop for char = (peek-char nil stream)
+                        do
+                          (cond ((eq char #\])
+                                 (read-char stream)
+                                 (loop-finish))
+                                ((char-equal char #\H)
+                                 (read-char stream)
+                                 (let ((count
+                                        (if (digit-char-p
+                                             (peek-char nil stream)) 
+                                            (read-number stream) 
+                                            1)))
+                                   (dotimes (i count)
+                                     (let ((h (add-molecule-atom (get-element "H"))))
+                                       (add-bond mol atom h)))))
+                                ((char-equal char #\-)
+                                 (read-char stream)
+                                 (let ((charge (- (read-charge stream #\-))))
+                                   (setf (charge atom) charge)))
+                                ((char-equal char #\+)
+                                 (read-char stream)
+                                 (let ((charge (read-charge stream #\+)))
+                                   (setf (charge atom) charge)))
+                                
+                                ;; FIXME! Add support for @ and @@ here!!!
+                                ((char-equal char #\@)
+                                 (read-char stream)
+                                 (if (char-equal (peek-char nil stream) #\@)
+                                     ;; it's clockwise
+                                     (progn
+                                       (read-char stream)
+                                       (push (make-instance 'tetrahedral-center
+                                                            :chiral-atom atom
+                                                            :orientation :clockwise)
+                                             (spatial-arrangements mol)))
+                                     ;; it's anticlockwise
+                                     (push (make-instance 'tetrahedral-center
+                                                          :chiral-atom atom
+                                                          :orientation :anticlockwise)
+                                           (spatial-arrangements mol))))
+                                (t (read-char stream)
+                                   (print "unknown SMILES character!"))))
                      (list (cons :explicit-atom atom))))))
              (add-molecule-atom (element)
                (let ((count (setf (gethash element element-count)
@@ -147,7 +165,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
                                        (format nil "~A~A" (id element) count))))
                    ;; we need to squirrel away the first atom because
                    ;; the chirality w.r.t. implicit H atoms is
-                   ;; different for the first ato.
+                   ;; different for the first atom.
                    (unless first-atom
                      (setf first-atom atom))
                    atom)))
@@ -185,6 +203,11 @@ of the MOLECULE class with the appropriate atoms and bonds."
                                 (list (cons :ring number))))
                           (error 'smiles-error
                                  :description "Couldn't read number!"))))
+
+                   ;; Explicitly handle Cl and Br as they are the only
+                   ;; multi-character atoms allowed in the SMILES
+                   ;; organic subset. Other atoms have to be specified
+                   ;; in brackets.
                    ((and (eql char #\C)
                          (eql (peek-char nil stream nil) #\l))
                     (read-char stream)
@@ -195,6 +218,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
                     (read-char stream)
                     (list
                      (cons :atom (add-molecule-atom (get-element "Br")))))
+
                    (char
                     (unless (member (string char) *organic-atoms*
                                     :test #'string-equal) 
@@ -229,6 +253,14 @@ of the MOLECULE class with the appropriate atoms and bonds."
                           ((:atom :explicit-atom)
                            (let ((atom (cdr token))
                                  bond-direction)
+                             (let ((last-arrangement
+                                    (find last (spatial-arrangements mol) :key 'chiral-atom)))
+                               (when last-arrangement
+                                 (vector-push atom (neighbors last-arrangement))))
+                             (let ((arrangement
+                                    (find atom (spatial-arrangements mol) :key 'chiral-atom)))
+                               (when arrangement
+                                 (vector-push last (neighbors arrangement))))
                              (cond ((eql bond-type :up)
                                     (setf bond-type :single)
                                     (setf bond-direction :up))

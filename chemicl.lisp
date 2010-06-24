@@ -1,6 +1,6 @@
 ;;; file: chemicl.lisp
 ;;;
-;;; Copyright (c) 2008-2009 Cyrus Harmon (ch-lisp@bobobeach.com)
+;;; Copyright (c) 2008-2010 Cyrus Harmon (ch-lisp@bobobeach.com)
 ;;; All rights reserved.
 ;;;
 ;;; Redistribution and use in source and binary forms prohibited.
@@ -76,7 +76,8 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
 (defclass molecule (graph:simple-edge-list-graph atom-container)
   ((name :initarg :name :accessor name :initform nil)
    (atom-name-hash :accessor atom-name-hash
-                   :initform (make-hash-table :test 'equal)))
+                   :initform (make-hash-table :test 'equal))
+   (spatial-arrangements :accessor spatial-arrangements :initform nil))
   (:documentation "A class for representing molecules."))
 
 (defun make-molecule (&rest args)
@@ -315,6 +316,23 @@ aromatic or not."
 
 (defclass spatial-arrangement () ())
 
-(defclass tetrahedral-center
-    (spatial-arrangement) ())
+(defclass tetrahedral-center (spatial-arrangement)
+  ((chiral-atom :initarg :chiral-atom :accessor chiral-atom)
+   (neighbors :initarg :neighbors
+              :accessor neighbors
+              :initform (make-array 4 :initial-element nil :fill-pointer 0))
+   ;; possible orientations are :clockwise and :anticlockwise
+   (orientation :initarg :orientation :accessor orientation)))
 
+(defclass double-bond-configuration (spatial-arrangement)
+  ((bond :initarg :bond :accessor bond) 
+   (left-atom :initarg :left-atom :accessor left-atom)
+   (right-atom :initarg :right-atom :accessor right-atom)
+   ;; order of substituents is critical:
+   ;; 1. top-left
+   ;; 2. bottom-left
+   ;; 3. top-right
+   ;; 4. bottom-right
+   (substituents :initarg :substituents
+                 :accessor substituents
+                 :initform (make-array 4 :initial-element nil))))
