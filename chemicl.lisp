@@ -316,7 +316,9 @@ aromatic or not."
 
 (defclass tetrahedral-center (spatial-arrangement)
   ((chiral-atom :initarg :chiral-atom :accessor chiral-atom)
-   (neighbors :initarg :neighbors :accessor neighbors)
+   (neighbors :initarg :neighbors
+              :accessor neighbors
+              :initform (make-array 4 :initial-element nil :fill-pointer 0))
    ;; possible orientations are :clockwise and :anticlockwise
-   (orientation :initarg :orientation :accessor :orientation)))
+   (orientation :initarg :orientation :accessor orientation)))
 
