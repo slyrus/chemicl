@@ -8,7 +8,7 @@
 
 (in-package :chemicl)
 
-(defclass ring-node ()
+(defclass ring-node (atom-container)
   ((nodes :accessor ring-node-nodes :initarg :nodes)
    (edges :accessor ring-node-edges :initarg :edges)))
 

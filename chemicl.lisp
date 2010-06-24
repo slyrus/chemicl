@@ -69,9 +69,11 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
          :element (get-element element-identifier)
          args))
 
+(defclass atom-container () ())
+
 ;;; We need a way of explicitly storing configurations around double
 ;;; bonds and configurations at chiral centers. Hrm...
-(defclass molecule (graph:simple-edge-list-graph)
+(defclass molecule (graph:simple-edge-list-graph atom-container)
   ((name :initarg :name :accessor name :initform nil)
    (atom-name-hash :accessor atom-name-hash
                    :initform (make-hash-table :test 'equal)))
