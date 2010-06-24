@@ -98,7 +98,7 @@ mass-number."
                   node
                 (let ((max-bond-order (xpath-number "maxbondorder" node))
                       (mass (xpath-number "mass" node))
-                      (electronegativity (xpath-number "electronegativity" node)))                  
+                      (electronegativity (xpath-number "electronegativity" node)))
                   (make-instance 'element
                                  :atomic-number (parse-integer-if atomic-number)
                                  :id id
