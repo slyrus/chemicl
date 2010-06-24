@@ -322,3 +322,15 @@ aromatic or not."
    ;; possible orientations are :clockwise and :anticlockwise
    (orientation :initarg :orientation :accessor orientation)))
 
+(defclass double-bond-configuration (spatial-arrangement)
+  ((bond :initarg :bond :accessor bond) 
+   (left-atom :initarg :left-atom :accessor left-atom)
+   (right-atom :initarg :right-atom :accessor right-atom)
+   ;; order of substituents is critical:
+   ;; 1. top-left
+   ;; 2. bottom-left
+   ;; 3. top-right
+   ;; 4. bottom-right
+   (substituents :initarg :substituents
+                 :accessor substituents
+                 :initform (make-array 4 :initial-element nil))))
