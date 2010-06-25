@@ -283,6 +283,40 @@ of the MOLECULE class with the appropriate atoms and bonds."
         (read-smiles-stream stream)))
     ;; Now we need to do some post-processing.
 
+    ;; 3. Add double-bond-configurations for explicit spatial
+    ;; arrangements around double bonds, based on the information
+    ;; placed in the bonds when we were parsing them above.
+    
+    (let ((explicit-double-bonds
+           (mapcan (lambda (x)
+                     (let ((left-neighbors (remove-if-not #'bond-direction (find-bonds-containing mol (atom1 x))))
+                           (right-neighbors (remove-if-not #'bond-direction (find-bonds-containing mol (atom2 x)))))
+                       (when (and left-neighbors right-neighbors)
+                         (list (list x left-neighbors right-neighbors))))) 
+                   (remove-if-not (lambda (x) (= (bond-order x) 2)) (bonds mol)))))
+      (mapcar (lambda (x)
+                (destructuring-bind (bond left right) x
+                  (let ((config (make-instance 'double-bond-configuration
+                                               :left-atom (atom1 bond)
+                                               :right-atom (atom2 bond))))
+                    (loop for child in left
+                       do
+                         (print child)
+                         (cond ((and (eq (atom1 bond) (atom1 child))
+                                      (eq (bond-direction bond) :up))
+                                 (setf (elt (substituents config) 1) child))
+                                ((and (eq (atom1 bond) (atom1 child))
+                                      (eq (bond-direction bond) :down))
+                                 (setf (elt (substituents config) 0) child))
+                                ((and (eq (atom1 bond) (atom2 child))
+                                      (eq (bond-direction bond) :up))
+                                 (setf (elt (substituents config) 0) child))
+                                ((and (eq (atom1 bond) (atom2 child))
+                                      (eq (bond-direction bond) :down))
+                                 (setf (elt (substituents config) 1) child))))
+                    (push config (spatial-arrangements mol)))))
+              explicit-double-bonds))
+
     ;; 2. Find aromatic rings and replace Kekule structures with
     ;; explicitly aromatic rings. Unfortunately, we need to do this
     ;; BEFORE we add the hydrogens, I think, 
