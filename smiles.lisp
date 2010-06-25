@@ -283,54 +283,6 @@ of the MOLECULE class with the appropriate atoms and bonds."
         (read-smiles-stream stream)))
     ;; Now we need to do some post-processing.
 
-    ;; 3. Add double-bond-configurations for explicit spatial
-    ;; arrangements around double bonds, based on the information
-    ;; placed in the bonds when we were parsing them above.
-    
-    (let ((explicit-double-bonds
-           (mapcan (lambda (x)
-                     (let ((left-neighbors (remove-if-not #'bond-direction (find-bonds-containing mol (atom1 x))))
-                           (right-neighbors (remove-if-not #'bond-direction (find-bonds-containing mol (atom2 x)))))
-                       (when (and left-neighbors right-neighbors)
-                         (list (list x left-neighbors right-neighbors))))) 
-                   (remove-if-not (lambda (x) (= (bond-order x) 2)) (bonds mol)))))
-      (mapcar (lambda (x)
-                (destructuring-bind (bond left right) x
-                  (let ((config (make-instance 'double-bond-configuration
-                                               :left-atom (atom1 bond)
-                                               :right-atom (atom2 bond))))
-                    (loop for child in left
-                       do
-                         (cond ((and (eq (atom1 bond) (atom1 child))
-                                     (eq (bond-direction child) :up))
-                                (setf (elt (substituents config) +bottom-left+) child))
-                               ((and (eq (atom1 bond) (atom1 child))
-                                     (eq (bond-direction child) :down))
-                                (setf (elt (substituents config) +top-left+) child))
-                               ((and (eq (atom1 bond) (atom2 child))
-                                     (eq (bond-direction child) :up))
-                                (setf (elt (substituents config) +top-left+) child))
-                               ((and (eq (atom1 bond) (atom2 child))
-                                     (eq (bond-direction child) :down))
-                                (setf (elt (substituents config) +bottom-left+) child))))
-
-                    (loop for child in right
-                       do
-                         (cond ((and (eq (atom2 bond) (atom1 child))
-                                     (eq (bond-direction child) :up))
-                                (setf (elt (substituents config) +top-right+) child))
-                               ((and (eq (atom2 bond) (atom1 child))
-                                     (eq (bond-direction child) :down))
-                                (setf (elt (substituents config) +bottom-right+) child))
-                               ((and (eq (atom2 bond) (atom2 child))
-                                     (eq (bond-direction child) :up))
-                                (setf (elt (substituents config) +bottom-right+) child))
-                               ((and (eq (atom2 bond) (atom2 child))
-                                     (eq (bond-direction child) :down))
-                                (setf (elt (substituents config) +top-right+) child))))
-                    (push config (spatial-arrangements mol)))))
-              explicit-double-bonds))
-
     ;; 2. Find aromatic rings and replace Kekule structures with
     ;; explicitly aromatic rings. Unfortunately, we need to do this
     ;; BEFORE we add the hydrogens, I think, 
@@ -346,6 +298,70 @@ of the MOLECULE class with the appropriate atoms and bonds."
     (when add-implicit-hydrogens
       (let ((implicit-h-atoms (nth-value 1 (add-hydrogens mol explicit-atoms))))))
       
+    ;; 3. Add double-bond-configurations for explicit spatial
+    ;; arrangements around double bonds, based on the information
+    ;; placed in the bonds when we were parsing them above.
+    
+    (let ((explicit-double-bonds
+           (mapcan (lambda (x)
+                     (let ((left-neighbors
+                            (remove-if-not
+                             #'bond-direction
+                             (find-bonds-containing mol (atom1 x))))
+                           (right-neighbors
+                            (remove-if-not
+                             #'bond-direction
+                             (find-bonds-containing mol (atom2 x)))))
+                       (when (and left-neighbors right-neighbors)
+                         (list (list x left-neighbors right-neighbors))))) 
+                   (remove-if-not (lambda (x) (= (bond-order x) 2)) (bonds mol)))))
+      (mapcar (lambda (x)
+                (destructuring-bind (bond left right) x
+                  (let ((config (make-instance 'double-bond-configuration
+                                               :bond bond
+                                               :left-atom (atom1 bond)
+                                               :right-atom (atom2 bond))))
+                    (flet ((check-and-set-substituent (index atom)
+                             (if (elt (substituents config) index)
+                                 (error 'smiles-error
+                                        :description "Invalid double bond configuration")
+                                 (setf (elt (substituents config) index) atom))))
+                      (loop for child in left
+                         do
+                           (cond ((and (eq (atom1 bond) (atom1 child))
+                                       (eq (bond-direction child) :up))
+                                  (check-and-set-substituent +bottom-left+ child))
+                                 ((and (eq (atom1 bond) (atom1 child))
+                                       (eq (bond-direction child) :down))
+                                  (check-and-set-substituent +top-left+ child))
+                               ((and (eq (atom1 bond) (atom2 child))
+                                     (eq (bond-direction child) :up))
+                                (check-and-set-substituent +bottom-left+ child))
+                               ((and (eq (atom1 bond) (atom2 child))
+                                     (eq (bond-direction child) :down))
+                                (check-and-set-substituent +top-left+ child))))
+
+                      (loop for child in right
+                         do
+                           (cond ((and (eq (atom2 bond) (atom1 child))
+                                       (eq (bond-direction child) :up))
+                                  (check-and-set-substituent +top-right+ child))
+                                 ((and (eq (atom2 bond) (atom1 child))
+                                       (eq (bond-direction child) :down))
+                                (check-and-set-substituent +bottom-right+ child))
+                                 ((and (eq (atom2 bond) (atom2 child))
+                                       (eq (bond-direction child) :up))
+                                  (check-and-set-substituent +bottom-right+ child))
+                                 ((and (eq (atom2 bond) (atom2 child))
+                                       (eq (bond-direction child) :down))
+                                  (check-and-set-substituent +top-right+ child)))))
+
+                    ;; FIXME now we should fill in the missing
+                    ;; (implicitly specified) bonds
+
+                    (push config (spatial-arrangements mol)))))
+              explicit-double-bonds))
+
     (values mol)))
 
 (defun remove-atoms (element-identifier atom-list)
