@@ -160,6 +160,9 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
    (order :accessor bond-order :initarg :order :initform 1)
    (direction :accessor bond-direction :initarg :direction :initform nil)))
 
+(setf (fdefinition 'bonds) #'graph:graph-edges)
+(setf (fdefinition 'atom1) #'graph:node1)
+(setf (fdefinition 'atom2) #'graph:node2)
 (setf (fdefinition 'map-bonds) #'graph:map-edges)
 (setf (fdefinition 'map-bonds->list) #'graph:map-edges->list)
 
@@ -196,6 +199,8 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
 (defgeneric add-bond (molecule atom-identifier-1 atom-identifier-2
                                &key type order direction))
 
+(defgeneric find-bond (molecule atom-identifier-1 atom-identifier-2))
+
 (defgeneric remove-bond (molecule atom-or-bond &rest args))
 
 (defgeneric find-bonds-containing (molecule atom))
@@ -225,6 +230,9 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
 
 (defmethod find-bonds-containing ((molecule molecule) (atom atom))
   (graph:find-edges-containing molecule atom))
+
+(defmethod find-bond ((molecule molecule) (atom1 atom) (atom2 atom))
+  (graph:edgep molecule atom1 atom2))
 
 
 (defun double-bond-configuration (molecule bond)
