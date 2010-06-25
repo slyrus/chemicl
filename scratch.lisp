@@ -461,3 +461,10 @@
 
 (mapcar #'find-duplicate
         (mapcar #'butlast (hanser-rings *graph-3*)))
+
+
+
+(let ((mol *z-tamoxifen*))
+  (mapcar (lambda (x) (cons (find-bonds-containing (atom1 x) mol) (atom2 x))) 
+          (remove-if-not (lambda (x) (= (bond-order x) 2)) (bonds mol))))
+        
