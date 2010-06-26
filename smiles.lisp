@@ -1,6 +1,6 @@
 ;;; file: smiles.lisp
 ;;;
-;;; Copyright (c) 2008 Cyrus Harmon (ch-lisp@bobobeach.com)
+;;; Copyright (c) 2008-2010 Cyrus Harmon (ch-lisp@bobobeach.com)
 ;;; All rights reserved.
 ;;;
 ;;; Redistribution and use in source and binary forms prohibited.
@@ -364,7 +364,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
 
     (values mol)))
 
-(defun remove-atoms (element-identifier atom-list)
+(defun remove-atoms-from-list (element-identifier atom-list)
   (remove
    (get-element element-identifier)
    atom-list
@@ -443,7 +443,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
     (graph:dfs-map molecule (get-atom molecule start)
                    (lambda (x)
                      (push x l)))
-    (nreverse (remove-atoms "H" l))))
+    (nreverse (remove-atoms-from-list "H" l))))
 
 (defun canon-invariants (molecule atoms)
   (mapcar (lambda (x) 
@@ -476,7 +476,7 @@ using the key "
      (reduce #'*
              (mapcar (lambda (y)
                        (elt primes (position y atoms)))
-                     (remove-atoms "H" (graph:neighbors molecule atom)))))
+                     (remove-atoms-from-list "H" (graph:neighbors molecule atom)))))
    atoms))
 
 (defun next-ranks (molecule atoms ranks)
@@ -510,7 +510,7 @@ using the key "
      finally (return (list ranks atoms))))
 
 (defun remove-implicit-h-atoms (list)
-  (remove-atoms "H" list))
+  (remove-atoms-from-list "H" list))
 
 (defun write-smiles-string-to-stream (molecule stream &key)
   (declare (optimize (debug 2)))
