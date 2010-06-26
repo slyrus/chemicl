@@ -129,7 +129,29 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
   (:method ((molecule molecule) (atom atom))
     (graph:remove-node molecule atom))
   (:documentation "Removes the atom (and any edges containing it) from
-  molecule."))
+  molecule. [FIXME: this documentation says it removes edges. That
+  seems at odd with the implementation!]"))
+
+(defgeneric remove-atoms-of-element (molecule element-identifier)
+  (:method ((molecule molecule) element-identifier)
+    (let ((element (get-element element-identifier)))
+      (let ((atoms-to-remove))
+        (graph:dfs-map molecule (graph:first-node molecule)
+                       (lambda (atom)
+                         (when (eq (element atom) element)
+                           (push atom atoms-to-remove))))
+        (map nil
+             (lambda (atom)
+               (let ((bonds (find-bonds-containing molecule atom)))
+                 (map nil
+                      (lambda (bond)
+                        (remove-bond molecule bond))
+                      bonds))
+               (remove-atom molecule atom))
+             atoms-to-remove)))
+    molecule)
+  (:documentation "(Destructively) removes all atoms of a given
+  element type, and bonds containing those atoms, from molecule."))
 
 (defgeneric atom-count (molecule)
   (:method ((molecule molecule))
