@@ -3,8 +3,29 @@
 ;;; Copyright (c) 2008-2010 Cyrus Harmon (ch-lisp@bobobeach.com)
 ;;; All rights reserved.
 ;;;
-;;; Redistribution and use in source and binary forms prohibited.
+;;; Redistribution and use in source and binary forms, with or without
+;;; modification, are permitted provided that the following conditions
+;;; are met:
 ;;;
+;;;   * Redistributions of source code must retain the above copyright
+;;;     notice, this list of conditions and the following disclaimer.
+;;;
+;;;   * Redistributions in binary form must reproduce the above
+;;;     copyright notice, this list of conditions and the following
+;;;     disclaimer in the documentation and/or other materials
+;;;     provided with the distribution.
+;;;
+;;; THIS SOFTWARE IS PROVIDED BY THE AUTHOR 'AS IS' AND ANY EXPRESSED
+;;; OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+;;; WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+;;; ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+;;; DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+;;; DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+;;; GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+;;; INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+;;; WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+;;; NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+;;; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (in-package :chemicl)
 
@@ -78,7 +99,12 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
    (atom-name-hash :accessor atom-name-hash
                    :initform (make-hash-table :test 'equal))
    (spatial-arrangements :accessor spatial-arrangements :initform nil))
-  (:documentation "A class for representing molecules."))
+  (:documentation "A class for representing molecules, that is a graph
+  of atoms connected by bonds. It is usually the case that a molecule
+  will be connected, but it is possible that certain
+  operations (adding atoms, removing bonds, e.g.) will leave the
+  molecule in a state where it is actually multiple disconnected
+  components."))
 
 (defun make-molecule (&rest args)
   (apply #'make-instance 'molecule args))
@@ -120,7 +146,7 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
 (defmethod graph:remove-node ((molecule molecule) (atom atom))
   (map nil
        (lambda (edge) (graph:remove-edge molecule edge))
-       (graph:find-edges-containing molecule atom))
+       (graph:find-bonds-containing molecule atom))
   (when (atom-name atom)
     (remhash (atom-name atom) (atom-name-hash molecule)))
   (call-next-method molecule atom))
@@ -129,8 +155,7 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
   (:method ((molecule molecule) (atom atom))
     (graph:remove-node molecule atom))
   (:documentation "Removes the atom (and any edges containing it) from
-  molecule. [FIXME: this documentation says it removes edges. That
-  seems at odd with the implementation!]"))
+  molecule."))
 
 (defgeneric remove-atoms-of-element (molecule element-identifier)
   (:method ((molecule molecule) element-identifier)
@@ -142,11 +167,6 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
                            (push atom atoms-to-remove))))
         (map nil
              (lambda (atom)
-               (let ((bonds (find-bonds-containing molecule atom)))
-                 (map nil
-                      (lambda (bond)
-                        (remove-bond molecule bond))
-                      bonds))
                (remove-atom molecule atom))
              atoms-to-remove)))
     molecule)
@@ -245,6 +265,13 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
   (destructuring-bind (atom-identifier-2)
       args
     (graph:remove-edge-between-nodes molecule atom-identifier-1 atom-identifier-2)))
+
+(defmethod remove-bond ((molecule molecule) (atom-identifier-1 string) &rest args)
+  (destructuring-bind (atom-identifier-2)
+      args
+    (graph:remove-edge-between-nodes molecule 
+                                     (get-atom molecule atom-identifier-1)
+                                     (get-atom molecule atom-identifier-2))))
 
 (defmethod remove-bond ((molecule molecule) (bond bond) &rest args)
   (declare (ignore args))

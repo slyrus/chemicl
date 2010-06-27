@@ -2,8 +2,8 @@
 (asdf:defsystem #:chemicl
   :name "chemicl"
   :author "Cyrus Harmon <ch-lisp@bobobeach.com>"
-  :version "0.0.1"
-  :licence "For Internal Use Only"
+  :version "0.0.2"
+  :licence "BSD"
   :description "A library for representing chemical structures"
   :depends-on (cxml cxml-stp epigraph)
   :components
