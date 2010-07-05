@@ -146,7 +146,7 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
 (defmethod graph:remove-node ((molecule molecule) (atom atom))
   (map nil
        (lambda (edge) (graph:remove-edge molecule edge))
-       (graph:find-bonds-containing molecule atom))
+       (find-bonds-containing molecule atom))
   (when (atom-name atom)
     (remhash (atom-name atom) (atom-name-hash molecule)))
   (call-next-method molecule atom))
