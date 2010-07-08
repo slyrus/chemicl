@@ -57,6 +57,7 @@
            #:add-atom
            #:find-atom
            #:remove-atom
+           #:atoms
            #:map-atoms
            #:map-atoms->list
 

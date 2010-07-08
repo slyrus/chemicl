@@ -178,6 +178,8 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
     (graph:node-count molecule))
   (:documentation "Returns the number of atoms in molecule."))
 
+(setf (fdefinition 'atoms) #'graph:nodes)
+
 (setf (fdefinition 'map-atoms) #'graph:map-nodes)
 (setf (fdefinition 'map-atoms->list) #'graph:map-nodes->list)
 
@@ -202,7 +204,7 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
    (order :accessor bond-order :initarg :order :initform 1)
    (direction :accessor bond-direction :initarg :direction :initform nil)))
 
-(setf (fdefinition 'bonds) #'graph:graph-edges)
+(setf (fdefinition 'bonds) #'graph:edges)
 (setf (fdefinition 'atom1) #'graph:node1)
 (setf (fdefinition 'atom2) #'graph:node2)
 (setf (fdefinition 'map-bonds) #'graph:map-edges)

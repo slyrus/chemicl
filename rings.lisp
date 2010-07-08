@@ -51,7 +51,7 @@
         (graph (graph:copy-graph graph))
         rings)
     (graph:map-edges (lambda (edge) (setf (gethash edge edge-hash)
-                                          (graph:edge-nodes edge)))
+                                          (graph:nodes edge)))
                      graph)
     (labels ((append-paths (p1 p2 x)
                (when (> (length p2) (length p1)) (rotatef p1 p2))
@@ -94,7 +94,7 @@
                     (graph:remove-edge graph path))
                (graph:remove-node graph x)))
       (map nil #'hanser-remove
-           (sort (graph:graph-nodes graph)
+           (sort (graph:nodes graph)
                  #'< :key (lambda (node)
                             (length (graph:neighbors graph node))))))
     rings))

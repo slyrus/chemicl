@@ -396,7 +396,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
   (remove-if
    (lambda (x)
      (member (get-element element-identifier)
-             (graph:edge-nodes x)
+             (graph:nodes x)
              :key #'element))
    edge-list))
 
@@ -404,7 +404,7 @@ of the MOLECULE class with the appropriate atoms and bonds."
   (remove-if-not
    (lambda (x)
      (member (get-element element-identifier)
-             (graph:edge-nodes x)
+             (graph:nodes x)
              :key #'element))
    edge-list))
 
@@ -557,8 +557,8 @@ using the key "
                ((< (bond-order x) (bond-order y)) x)
                ((> (bond-order x) (bond-order y)) y)
                (t (let ((base (car (intersection
-                                    (graph:edge-nodes x)
-                                    (graph:edge-nodes y)))))
+                                    (graph:nodes x)
+                                    (graph:nodes y)))))
                     (if (< (gethash (graph:other-edge-node x base)
                                     rank-hash)
                            (gethash (graph:other-edge-node y base)
