@@ -162,6 +162,9 @@
 (defparameter |*e-1,2-difluoroethene*| (parse-smiles-string "F/C=C/F"
                                                             :name "e-1,2-difluoroethene"))
 
+(defparameter |*z-1,2-difluoroethene*| (parse-smiles-string "F\\C=C/F"
+                                                            :name "z-1,2-difluoroethene"))
+
 #+nil
 (defparameter *tamoxifen*
   (parse-smiles-string "CCC(=C(C1=CC=CC=C1)C2=CC=C(C=C2)OCCN(C)C)C3=CC=CC=C3"
@@ -468,3 +471,58 @@
   (mapcar (lambda (x) (cons (find-bonds-containing (atom1 x) mol) (atom2 x))) 
           (remove-if-not (lambda (x) (= (bond-order x) 2)) (bonds mol))))
         
+
+(defparameter *chain-test*
+  (parse-smiles-string "CCCCCCC(=O)C(CCC(O)CC)CCC(N)CCC"))
+
+(defparameter *chain-test-2* (copy-molecule *chain-test*))
+
+(remove-atoms-of-element *chain-test-2* "H")
+(graph:find-longest-path *chain-test-2*)
+(map-bonds #'print *chain-test-2*)
+(graph:find-connected-components *chain-test*)
+
+(defparameter *chain-test-3* (copy-molecule *chain-test-2*))
+(remove-bond *chain-test-3* "C7" "C8")
+(graph:find-connected-components *chain-test-3*)
+
+;;; find the distance between two nodes
+(let ((mol *chain-test*))
+  (let ((atom1 (get-atom mol "C1"))
+        (atom2 (get-atom mol "C12")))
+    (graph:graph-distance mol atom1 atom2)))
+
+(defparameter q (time (graph::graph-distance-matrix *chain-test*)))
+
+(defparameter *acetominophen*
+  (chem:parse-smiles-string "CC(=O)NC1=CC=C(C=C1)O"
+                            :name "acetominophen"))
+(defparameter *ring-test*
+  (chem:parse-smiles-string "NN(N1OO1)(N2OON3OOON3O2)"
+                            :name "ring-test"))
+
+
+;; list the atoms:
+(atoms *acetominophen*)
+
+;; list the bonds:
+(bonds *acetominophen*)
+
+(let ((mol *ring-test*))
+  ;; remove the hydrogens
+  (let ((mol2 (remove-atoms-of-element (copy-molecule mol) "H")))
+    
+    ;; find the terminal atoms
+    (let ((atoms-to-place (atoms mol2))
+          terminal-atoms)
+      (map-atoms (lambda (atom)
+                   (when (= (length (graph:neighbors mol2 atom)) 1)
+                     (push atom terminal-atoms)))
+                 mol2)
+      (let ((mol3 (copy-molecule mol2)))
+        (map nil (lambda (atom)
+                   (remove-atom mol3 atom))
+             terminal-atoms)
+        (let ((ring-graph (collapse-rings mol3)))
+          (list (graph:nodes ring-graph)
+                (graph:edges ring-graph)))))))

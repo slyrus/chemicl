@@ -30,8 +30,8 @@
 (in-package :chemicl)
 
 (defclass ring-node (atom-container)
-  ((nodes :accessor ring-node-nodes :initarg :nodes)
-   (edges :accessor ring-node-edges :initarg :edges)))
+  ((nodes :accessor graph:nodes :initarg :nodes)
+   (edges :accessor graph:edges :initarg :edges)))
 
 ;;;; Hanser Ring Perception Algorithm
 
