@@ -365,7 +365,7 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
         (t 0)))
 
 (defun aromaticp (molecule ring)
-  "Uses Hunckle's 4n+2 rule to decide if a ring in a molecule is
+  "Uses Huckle's 4n+2 rule to decide if a ring in a molecule is
 aromatic or not."
   (let ((excess-electrons
          (reduce #'+ (map 'list (lambda (atom) (excess-electrons molecule atom))
