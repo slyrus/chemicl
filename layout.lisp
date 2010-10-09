@@ -7,6 +7,9 @@
 (defparameter *cyclooctane* (parse-smiles-string "C1CCCCCCC1"
                                                  :name "cyclooctane"))
 
+(defparameter *napthalene* (parse-smiles-string "C12=C(C=CC=C2)C=CC=C1"
+                                                :name "napthalene"))
+
 (defun layout-cycle (nodes &key
                      (ring-center #(0.0d0 0.0d0))
                      (start-angle 0.0d0)
