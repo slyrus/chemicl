@@ -6,63 +6,38 @@
 
 ;;;
 ;;; Aliphatic Organic Subset Atoms (Cl Br B C N O S P F I)
-(defun <aliphatic-chlorine> () (string? "Cl"))
-(defun <aliphatic-bromine> () (string? "Br"))
-(defun <aliphatic-boron> () (string? "B"))
-(defun <aliphatic-carbon> () (string? "C"))
-(defun <aliphatic-nitrogen> () (string? "N"))
-(defun <aliphatic-oxygen> () (string? "O"))
-(defun <aliphatic-sulfur> () (string? "S"))
-(defun <aliphatic-phosphorus> () (string? "P"))
-(defun <aliphatic-fluorine> () (string? "F"))
-(defun <aliphatic-iodine> () (string? "I"))
-
 (defun <aliphatic-organic-atom> ()
-  (hook? #'make-atom (choices (<aliphatic-chlorine>)
-                              (<aliphatic-boron>)
-                              (<aliphatic-carbon>)
-                              (<aliphatic-nitrogen>)
-                              (<aliphatic-oxygen>)
-                              (<aliphatic-sulfur>)
-                              (<aliphatic-phosphorus>)
-                              (<aliphatic-fluorine>)
-                              (<aliphatic-iodine>))))
+  (hook? #'make-atom
+         (apply #'choices
+                (map 'list
+                     #'string?
+                     '("Cl" "Br" "B" "C" "N" "O" "S" "P" "F" "I")))))
 
 ;;;
 ;;; Aromatic Organic Subset Atoms (b c n o s p)
-(defun <aromatic-boron> () (hook? #'string-upcase (string? "b")))
-(defun <aromatic-carbon> () (hook? #'string-upcase (string? "c")))
-(defun <aromatic-nitrogen> () (hook? #'string-upcase (string? "n")))
-(defun <aromatic-oxygen> () (hook? #'string-upcase (string? "o")))
-(defun <aromatic-sulfur> () (hook? #'string-upcase (string? "s")))
-(defun <aromatic-phosphorus> () (hook? #'string-upcase (string? "p")))
+(defun <aromatic-atom-matcher> (str)
+  (hook? #'string-upcase (string? str)))
 
 (defun <aromatic-organic-atom> ()
-  (hook? #'make-atom (choices (<aromatic-boron>)
-                              (<aromatic-carbon>)
-                              (<aromatic-nitrogen>)
-                              (<aromatic-oxygen>)
-                              (<aromatic-sulfur>)
-                              (<aromatic-phosphorus>))))
+  (hook? #'make-atom
+         (apply #'choices 
+                (map 'list
+                     #'<aromatic-atom-matcher>
+                     '("b" "c" "n" "o" "s" "p")))))
 
 ;;;
 ;;; Bracketed atoms e.g. [Na]
-
 (defun <charge> ()
   (choice (named-seq*
            (char? #\+)
-           (<- charge (atmost?
-                       (choices (named-seq* (char? #\+) 2)
-                                (nat*))
-                       1))
-           (or (and charge (first charge)) 1))
+           (<- charge (opt? (choices (named-seq* (char? #\+) 2)
+                                     (nat*))))
+           (or charge 1))
           (named-seq*
            (char? #\-)
-           (<- charge (atmost?
-                       (choices (named-seq* (char? #\-) 2)
-                                (nat*))
-                       1))
-           (- (or (and charge (first charge)) 1)))))
+           (<- charge (opt? (choices (named-seq* (char? #\-) 2)
+                                     (nat*))))
+           (- (or charge 1)))))
 
 (defun <bracket-aliphatic-atom-symbol> ()
   (named-seq* (<- pre (upper?))
@@ -83,10 +58,10 @@
               (<- atm (choice
                        (<bracket-aliphatic-atom-symbol>)
                        (<bracket-aromatic-atom-symbol>)))
-              (<- charge (atmost? (<charge>) 1))
+              (<- charge (opt? (<charge>)))
               #\]
               (apply #'make-atom atm
-                     (when charge `(:charge ,(first charge))))))
+                     (when charge `(:charge ,charge)))))
 
 ;;;
 ;;; Atoms
