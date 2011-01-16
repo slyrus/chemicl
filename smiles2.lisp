@@ -18,16 +18,15 @@
 (defun <aliphatic-iodine> () (string? "I"))
 
 (defun <aliphatic-organic-atom> ()
-  (named-seq* (<- element (choices (<aliphatic-chlorine>)
-                                    (<aliphatic-boron>)
-                                    (<aliphatic-carbon>)
-                                    (<aliphatic-nitrogen>)
-                                    (<aliphatic-oxygen>)
-                                    (<aliphatic-sulfur>)
-                                    (<aliphatic-phosphorus>)
-                                    (<aliphatic-fluorine>)
-                                    (<aliphatic-iodine>)))
-              (make-atom element)))
+  (hook? #'make-atom (choices (<aliphatic-chlorine>)
+                              (<aliphatic-boron>)
+                              (<aliphatic-carbon>)
+                              (<aliphatic-nitrogen>)
+                              (<aliphatic-oxygen>)
+                              (<aliphatic-sulfur>)
+                              (<aliphatic-phosphorus>)
+                              (<aliphatic-fluorine>)
+                              (<aliphatic-iodine>))))
 
 ;;;
 ;;; Aromatic Organic Subset Atoms (b c n o s p)
@@ -39,13 +38,12 @@
 (defun <aromatic-phosphorus> () (hook? #'string-upcase (string? "p")))
 
 (defun <aromatic-organic-atom> ()
-  (named-seq* (<- element (choices (<aromatic-boron>)
-                                    (<aromatic-carbon>)
-                                    (<aromatic-nitrogen>)
-                                    (<aromatic-oxygen>)
-                                    (<aromatic-sulfur>)
-                                    (<aromatic-phosphorus>)))
-              (make-atom element)))
+  (hook? #'make-atom (choices (<aromatic-boron>)
+                              (<aromatic-carbon>)
+                              (<aromatic-nitrogen>)
+                              (<aromatic-oxygen>)
+                              (<aromatic-sulfur>)
+                              (<aromatic-phosphorus>))))
 
 ;;;
 ;;; Bracketed atoms e.g. [Na]
@@ -72,13 +70,13 @@
               (format nil "~A~{~A~}" pre suff)))
 
 (defun <bracket-aromatic-atom-symbol> ()
-  (choices (named-seq* (char? #\s) (char? #\e) "Se")
-           (named-seq* (char? #\a) (char? #\s) "As")
-           (named-seq* (char? #\c) "C")
-           (named-seq* (char? #\n) "N")
-           (named-seq* (char? #\o) "O")
-           (named-seq* (char? #\p) "P")
-           (named-seq* (char? #\s) "S")))
+  (choices (named-seq* (string? "se") "Se")
+           (named-seq* (string? "as") "As")
+           (hook? #'string-upcase (string? "c"))
+           (hook? #'string-upcase (string? "n"))
+           (hook? #'string-upcase (string? "o"))
+           (hook? #'string-upcase (string? "p"))
+           (hook? #'string-upcase (string? "s"))))
 
 (defun <bracket-atom> ()
   (named-seq* #\[ 
