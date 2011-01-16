@@ -22,7 +22,7 @@
 (defun <aliphatic-iodine> () (named-seq* (char? #\I) "I"))
 
 (defun <aliphatic-organic-atom> ()
-  (named-seq* (<- element (choices1 (<aliphatic-chlorine>)
+  (named-seq* (<- element (choices (<aliphatic-chlorine>)
                                     (<aliphatic-boron>)
                                     (<aliphatic-carbon>)
                                     (<aliphatic-nitrogen>)
@@ -41,7 +41,7 @@
 (defun <aromatic-phosphorus> () (named-seq* (char? #\p) "P"))
 
 (defun <aromatic-organic-atom> ()
-  (named-seq* (<- element (choices1 (<aromatic-boron>)
+  (named-seq* (<- element (choices (<aromatic-boron>)
                                     (<aromatic-carbon>)
                                     (<aromatic-nitrogen>)
                                     (<aromatic-oxygen>)
