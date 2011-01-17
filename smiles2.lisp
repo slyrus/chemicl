@@ -5,6 +5,18 @@
 (in-package #:chemicl-smiles)
 
 ;;;
+;;; special variables to hold state during the parsing and building of molecules/atoms
+(defvar *current-molecule*)
+(defvar *last-atom*)
+(defvar *atom-counts*)
+(defvar *pending-rings*)
+(defvar *open-rings*)
+(defvar *aromatic*)
+(defvar *aromatic-atoms*)
+(defvar *direction*)
+(defvar *configurations*)
+
+;;;
 ;;; Aliphatic Organic Subset Atoms (Cl Br B C N O S P F I)
 (defun <aliphatic-organic-atom> ()
   (hook? #'make-atom
@@ -45,13 +57,12 @@
               (format nil "~A~{~A~}" pre suff)))
 
 (defun <bracket-aromatic-atom-symbol> ()
-  (choices (named-seq* (string? "se") "Se")
-           (named-seq* (string? "as") "As")
-           (hook? #'string-upcase (string? "c"))
-           (hook? #'string-upcase (string? "n"))
-           (hook? #'string-upcase (string? "o"))
-           (hook? #'string-upcase (string? "p"))
-           (hook? #'string-upcase (string? "s"))))
+  (apply #'choices
+         (named-seq* (string? "se") "Se")
+         (named-seq* (string? "as") "As")
+         (map 'list
+              #'<aromatic-atom-matcher>
+              '("c" "n" "o" "p" "s"))))
 
 (defun <bracket-atom> ()
   (named-seq* #\[ 
@@ -90,6 +101,25 @@
    (named-seq* (<up-bond>) :up)
    (named-seq* (<down-bond>) :down)))
 
-(defun <atom-seq> ()
-  (many? (<atom>)))
+(defun <branch> ()
+  (named-seq* #\(
+              #\)
+              ))
 
+(defun <atom-seq> ()
+  (many? (named-seq*
+          (<- atom (<atom>))
+          (opt? (<branch>))
+          (setf *last-atom* atom))))
+
+(defun parse-smiles-string (str)
+  (let (*current-molecule*
+        *last-atom*
+        *atom-counts*
+        *pending-rings*
+        *open-rings*
+        *aromatic*
+        *aromatic-atoms*
+        *direction*
+        *configurations*)
+    (parse-string* (<atom-seq>) str :complete t)))
