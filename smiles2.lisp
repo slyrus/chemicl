@@ -5,17 +5,9 @@
 (in-package #:chemicl-smiles)
 
 ;;;
-;;; special variables to hold state during the parsing and building of molecules/atoms
-(defvar *current-molecule*)
-(defvar *last-atom*)
-(defvar *bond-order*)
-(defvar *atom-counts*)
-(defvar *pending-rings*)
-(defvar *open-rings*)
-(defvar *aromatic*)
-(defvar *aromatic-atoms*)
-(defvar *direction*)
-(defvar *configurations*)
+;;; parser-combinator utilities
+(defun as-digit? ()
+  (hook? #'digit-char-p (digit?)))
 
 
 ;;;
@@ -41,6 +33,16 @@
 
 ;;;
 ;;; Bracketed atoms e.g. [Na]
+(defun <isotope> ()
+  (nat?))
+
+(defun <hydrogen-count> ()
+  (opt?
+   (named-seq*
+    #\H
+    (<- num (nat?))
+    (or num 1))))
+
 (defun <charge> ()
   (choice1 (named-seq*
             (char? #\+)
@@ -54,39 +56,41 @@
             (- (or charge 1)))))
 
 (defun <bracket-aliphatic-atom-symbol> ()
-  (named-seq* (<- pre (upper?))
+  (named-seq? (<- pre (upper?))
               (<- suff (atmost? (lower?) 2))
               (format nil "~A~{~A~}" pre suff)))
 
 (defun <bracket-aromatic-atom-symbol> ()
   (apply #'choices1
-         (named-seq* (string? "se") "Se")
-         (named-seq* (string? "as") "As")
+         (named-seq? (string? "se") "Se")
+         (named-seq? (string? "as") "As")
          (map 'list
               #'<aromatic-atom-matcher>
               '("c" "n" "o" "p" "s"))))
 
 (defun <bracket-atom> ()
-  (named-seq* #\[ 
+  (named-seq? #\[ 
               (<- atm (choice1
                        (<bracket-aliphatic-atom-symbol>)
                        (<bracket-aromatic-atom-symbol>)))
+              (<- hydrogen-count (<hydrogen-count>))
               (<- charge (opt? (<charge>)))
               #\]
-              (apply #'make-atom atm
-                     (when charge `(:charge ,charge)))))
+              (let ((atom (apply #'make-atom atm
+                                 (append
+                                  (when charge `(:charge ,charge))))))
+                (when hydrogen-count
+                  (print (list 'hydrogens hydrogen-count)))
+                atom)))
 
 ;;;
 ;;; Atoms
 (defun <atom> ()
-  (hook?
-   (lambda (atom) (setf *last-atom* atom))
-   (choices1 (<bracket-atom>)
-             (<aliphatic-organic-atom>)
-             (<aromatic-organic-atom>))))
+  (choices1 (<bracket-atom>)
+            (<aliphatic-organic-atom>)
+            (<aromatic-organic-atom>)))
 ;;;
 ;;; Bonds
-
 (defun <single-bond> () (char? #\-))
 (defun <double-bond> () (char? #\=))
 (defun <triple-bond> () (char? #\#))
@@ -96,70 +100,88 @@
 (defun <down-bond> () (char? #\\))
 
 (defun <bond> ()
-  (named-seq*
-   (<- order (choices1
-              (named-seq* (<single-bond>) 1)
-              (named-seq* (<double-bond>) 2)
-              (named-seq* (<triple-bond>) 3)
-              (named-seq* (<quadruple-bond>) 4)
-              (named-seq* (<aromatic-bond>) :aromatic)
-              (named-seq* (<up-bond>) :up)
-              (named-seq* (<down-bond>) :down)))
-   (setf *bond-order* order)))
-
-(defun <branch> ()
-  (bracket? #\( (delayed? (<chain>)) #\) ))
-
-(defun as-digit? ()
-  (hook? #'digit-char-p (digit?)))
-
-(defun <ring-bond> ()
-  (choice1
-   (named-seq* (opt? (<bond>)) 
-               #\%
-               (<- digit1 (as-digit?))
-               (<- digit2 (as-digit?))
-               (+ (* 10 digit1) digit2))
-   (named-seq* (opt? (<bond>))
-               (<- digit1 (as-digit?))
-               digit1)))
-
-;;; use order 0 for disconnected atoms!
-(defun <dot> ()
-  (named-seq* #\.
-              (setf *bond-order* 0)))
+  (choices
+   (named-seq? (<single-bond>) 1)
+   (named-seq? (<double-bond>) 2)
+   (named-seq? (<triple-bond>) 3)
+   (named-seq? (<quadruple-bond>) 4)
+   (named-seq? (<aromatic-bond>) :aromatic)
+   (named-seq? (<up-bond>) :up)
+   (named-seq? (<down-bond>) :down)))
 
 (defun <bond-or-dot> ()
   (choice1 (<bond>)
            (<dot>)))
 
-(defmacro always (p)
-  `(named-seq* (result nil)
-               ,p))
+;;;
+;;; Core atom rule
+;;;
+;;; This rule encompasses the atom itself, all connected branches,
+;;; ring-bond symbols, and a bond or dot symbol indicating arity (or
+;;; disconnectedness) of the next (non-chain) bond from this atom
+(defun <atom-expr> (mol)
+  (mdo (<- atom (<atom>))
+       (<- branches1 (many? (<branch> mol atom)))
+       (<- rings (many? (<ring-bond>)))
+       (<- branches2 (many? (<branch> mol atom)))
+       (opt? (<bond-or-dot>))
+       (result (list atom branches1 rings branches2))))
 
-(defun <atom-expr> ()
-  (named-seq* (always (print *last-atom*))
-              (<- atom (<atom>))
-              (<- branches1 (many? (<branch>)))
-              (always (print *bond-order*))
-              (<- rings (many? (<ring-bond>)))
-              (always (setf *bond-order* nil))
-              (<- branches2 (many? (<branch>)))
-              (opt? (<bond-or-dot>))
-              (list atom branches1 rings branches2)))
 
-(defun <chain> ()
-  (many? (<atom-expr>)))
+;;;
+;;; Branches
+(defun <ring-bond> ()
+  (choice
+   (named-seq? (opt? (<bond>)) 
+               #\%
+               (<- digit1 (as-digit?))
+               (<- digit2 (as-digit?))
+               (+ (* 10 digit1) digit2))
+   (named-seq? (opt? (<bond>))
+               (<- digit1 (as-digit?))
+               digit1)))
 
+(defun <branched-atom> (mol)
+  (mdo 
+    (<- bond (opt? (<bond>)))
+    (<- atom (<atom>))
+    (<- ring-bonds (many? (<ring-bond>)))
+    (<- branches (many? (<branch> mol atom)))
+       (result (list bond atom ring-bonds branches))))
+  
+(defun <branch> (mol atom)
+  (bracket? #\(
+            (choices
+             (<chain> mol)
+             (named-seq?
+              (<- bond (<bond>))
+              (<- chain (curtail? (<chain> mol)))
+              (list bond chain))
+             (named-seq?
+              (<- dot (<dot>))
+              (<- chain (curtail? (<chain> mol)))
+              (list dot chain)))
+            #\)))
+
+;;; use order 0 for disconnected atoms!
+(defun <dot> () (char? #\.) )
+
+(defun unzip (l)
+  (if (and (car l) (listp (car l)))
+      (cons (cdr l) (unzip (car l)))
+      (cons (cdr l) (list (car l)))))
+;;;
+;;; Core chain rule -- a (possibly branched) chain of atoms
+(defun <chain> (mol)
+  (hook? #'unzip (chainl1?
+                  (<branched-atom> mol)
+                  (result #'cons))))
+
+;;;
+;;; Main (only?) (useful) entry point to all of this code
+;;; 
+;;; Parsess a SMILES string and returns a molecule (should this really
+;;; return a set of molecules?)
 (defun parse-smiles-string (str)
-  (let (*current-molecule*
-        *last-atom*
-        *bond-order*
-        *atom-counts*
-        *pending-rings*
-        *open-rings*
-        *aromatic*
-        *aromatic-atoms*
-        *direction*
-        *configurations*)
-    (parse-string* (<chain>) str :complete t)))
+  (let ((mol (make-molecule)))
+    (parse-string* (<chain> mol) str :complete t)))
