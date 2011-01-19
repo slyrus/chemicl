@@ -36,7 +36,10 @@
    (isotope :initarg :isotope :accessor isotope :initform nil)
    (hybridization :initarg :hybridization
                   :accessor hybridization
-                  :initform nil))
+                  :initform nil)
+   (explicit-hydrogen-count :initarg :explicit-hydrogen-count
+                            :accessor explicit-hydrogen-count
+                            :initform 0))
   (:documentation "A class for representing individual atoms. For
   example, a molecule of hydrogen class would contain two atom
   instances, each of whose element slots would contain the (same)
