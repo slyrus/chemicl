@@ -31,6 +31,7 @@
 (in-package #:cl-user)
 
 (defpackage #:chemicl
+  (:use #:cl)
   (:shadow #:atom)
   (:nicknames #:chem)
   (:export #:element
@@ -74,7 +75,5 @@
            #:molecular-formula
 
            #:parse-smiles-string
-           #:write-smiles-string)
-
-  (:use #:cl))
+           #:write-smiles-string))
 
