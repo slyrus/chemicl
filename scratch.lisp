@@ -10,6 +10,14 @@
               (xpath:map-node-set->list #'xpath:string-value result))
       (xpath:string-value result)))
 
+(defparameter *element-nodes*
+  (cxml:parse-file 
+   (asdf:component-pathname
+    (let ((path '("chemicl" "data" "elementdata.xml")))
+      (reduce #'asdf:find-component (cdr path)
+              :initial-value (asdf:find-system (car path)))))
+   (stp:make-builder)))
+
 (join-xpath-result 
  (xpath:evaluate
   (concatenate 'string "/elements"
