@@ -5,7 +5,7 @@
   :version "0.0.2"
   :licence "BSD"
   :description "A library for representing chemical structures"
-  :depends-on (cxml cxml-stp epigraph)
+  :depends-on (cxml cxml-stp epigraph parser-combinators fset)
   :components
   ((:cl-source-file "package")
    (:cl-source-file "util" :depends-on (package))

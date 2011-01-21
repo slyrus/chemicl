@@ -1,9 +1,6 @@
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (ql:quickload :parser-combinators)
-  (ql:quickload :fset))
-
-(cl:defpackage smiles-minimal (:use :cl :parser-combinators #:chemicl))
+(cl:defpackage smiles-minimal
+  (:use #:cl #:parser-combinators #:chemicl))
 
 (in-package :smiles-minimal)
 
@@ -17,9 +14,85 @@
    (kind   :accessor kind-of   :initarg :kind))
   (:documentation "Immutable edge instance"))
 
+;;;
+;;; Aliphatic Organic Subset Atoms (Cl Br B C N O S P F I)
+(defun <aliphatic-organic-atom> ()
+  (hook? #'make-atom
+         (apply #'choices1
+                (map 'list
+                     #'string?
+                     '("Cl" "Br" "B" "C" "N" "O" "S" "P" "F" "I")))))
+
+;;;
+;;; Aromatic Organic Subset Atoms (b c n o s p)
+(defun <aromatic-atom-matcher> (str)
+  (hook? #'string-upcase (string? str)))
+
+(defun <aromatic-organic-atom> ()
+  (hook? #'make-atom
+         (apply #'choices1
+                (map 'list
+                     #'<aromatic-atom-matcher>
+                     '("b" "c" "n" "o" "s" "p")))))
+
+;;;
+;;; Bracketed atoms e.g. [Na]
+(defun <isotope> ()
+  (nat?))
+
+(defun <hydrogen-count> ()
+  (opt?
+   (named-seq*
+    #\H
+    (<- num (nat?))
+    (or num 1))))
+
+(defun <charge> ()
+  (choice1 (named-seq*
+            (char? #\+)
+            (<- charge (opt? (choices1 (named-seq* (char? #\+) 2)
+                                       (nat*))))
+            (or charge 1))
+           (named-seq*
+            (char? #\-)
+            (<- charge (opt? (choices1 (named-seq* (char? #\-) 2)
+                                       (nat*))))
+            (- (or charge 1)))))
+
+(defun <bracket-aliphatic-atom-symbol> ()
+  (named-seq? (<- pre (upper?))
+              (<- suff (atmost? (lower?) 2))
+              (format nil "~A~{~A~}" pre suff)))
+
+(defun <bracket-aromatic-atom-symbol> ()
+  (apply #'choices1
+         (named-seq? (string? "se") "Se")
+         (named-seq? (string? "as") "As")
+         (map 'list
+              #'<aromatic-atom-matcher>
+              '("c" "n" "o" "p" "s"))))
+
+(defun <bracket-atom> ()
+  (named-seq? #\[ 
+              (<- atm (choice1
+                       (<bracket-aliphatic-atom-symbol>)
+                       (<bracket-aromatic-atom-symbol>)))
+              (<- hydrogen-count (<hydrogen-count>))
+              (<- charge (opt? (<charge>)))
+              #\]
+              (let ((atom (apply #'make-atom atm
+                                 (append
+                                  (when charge `(:charge ,charge))))))
+                (when hydrogen-count
+                  (print (list 'hydrogens hydrogen-count)))
+                atom)))
+
+;;;
+;;; Atoms
 (defun <atom> ()
-  (named-seq? "C"
-              (make-instance 'the-atom :name "C")))
+  (choices1 (<bracket-atom>)
+            (<aliphatic-organic-atom>)
+            (<aromatic-organic-atom>)))
 
 (defun collect-ring-tags (atom ring-tags map)
   (if (null ring-tags)
@@ -50,7 +123,7 @@
 
 (defun <branch> (subchain-parser)
   (bracket? #\(
-            (named-seq? (<- bond (choices #\- #\: #\= #\# (result nil)))
+            (named-seq? (<- bond (choices #\- #\: #\= #\# #\\ #\/ #\$  (result nil)))
                         (<- subchain subchain-parser)
                         (fset:map (fset:$ subchain) (:root-bond bond)))
             #\)))
@@ -116,9 +189,12 @@
       (format str "graph smiles {~&")
       (fset:do-set (edge edge-set)
         (format str "\"~a ~a\" -- \"~a ~a\" [label = \"~a\"]~&"
-                (name-of (source-of edge))
+                (id (element (source-of edge)))
                 (fset:@ atom-number-map (source-of edge))
-                (name-of (source-of edge))
+                (id (element (dest-of edge)))
                 (fset:@ atom-number-map (dest-of edge))
                 (kind-of edge)))
       (format str "}"))))
+
+(defun parse-smiles-string (str)
+  (parse-string* (<chain>) str))
