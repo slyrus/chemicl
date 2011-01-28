@@ -1,23 +1,45 @@
 
-(cl:defpackage smiles-minimal
-  (:use #:cl #:parser-combinators #:chemicl))
+(cl:eval-when (:compile-toplevel :load-toplevel :execute)
+ (ql:quickload 'named-readtables))
 
-(in-package :smiles-minimal)
+(cl:defpackage #:smiles3
+  (:use #:cl #:parser-combinators)
+  (:import-from #:chemicl
+                #:molecule
+                #:get-element
+                #:make-atom
+                #:element
+                #:add-atom
+                #:id
+                #:atoms
+                #:atom1
+                #:atom2
+                #:bond
+                #:bond-order))
 
-(defclass the-atom ()
-  ((name :accessor name-of :initarg :name))
-  (:documentation "Immutable atom instance"))
+(in-package :smiles3)
 
-(defclass the-edge ()
-  ((source :accessor source-of :initarg :source)
-   (dest   :accessor dest-of   :initarg :dest)
-   (kind   :accessor kind-of   :initarg :kind))
-  (:documentation "Immutable edge instance"))
+(defclass smiles-atom (chemicl:atom)
+  ((aromatic :initarg :aromatic :accessor aromatic :initform nil)
+   (explicit-hydrogen-count :initarg :explicit-hydrogen-count
+                            :accessor explicit-hydrogen-count
+                            :initform 0)))
+
+(defun make-smiles-atom (element-identifier &rest args)
+  (apply #'make-instance
+         'smiles-atom
+         :element (get-element element-identifier)
+         args))
+
+;;;
+;;; parser-combinator utilities
+(defun as-digit? ()
+  (hook? #'digit-char-p (digit?)))
 
 ;;;
 ;;; Aliphatic Organic Subset Atoms (Cl Br B C N O S P F I)
 (defun <aliphatic-organic-atom> ()
-  (hook? #'make-atom
+  (hook? #'make-smiles-atom
          (apply #'choices1
                 (map 'list
                      #'string?
@@ -29,7 +51,8 @@
   (hook? #'string-upcase (string? str)))
 
 (defun <aromatic-organic-atom> ()
-  (hook? #'make-atom
+  (hook? (lambda (element)
+           (make-smiles-atom element :aromatic t))
          (apply #'choices1
                 (map 'list
                      #'<aromatic-atom-matcher>
@@ -74,18 +97,30 @@
 
 (defun <bracket-atom> ()
   (named-seq? #\[ 
-              (<- atm (choice1
-                       (<bracket-aliphatic-atom-symbol>)
-                       (<bracket-aromatic-atom-symbol>)))
+              (<- isotope-number (opt? (nat?)))
+              (<- atom-aromaticity (choice1
+                                    (seq-list?
+                                     (<bracket-aliphatic-atom-symbol>)
+                                     (result nil))
+                                    (seq-list?
+                                     (<bracket-aromatic-atom-symbol>)
+                                     (result t))))
               (<- hydrogen-count (<hydrogen-count>))
               (<- charge (opt? (<charge>)))
               #\]
-              (let ((atom (apply #'make-atom atm
-                                 (append
-                                  (when charge `(:charge ,charge))))))
-                (when hydrogen-count
-                  (print (list 'hydrogens hydrogen-count)))
-                atom)))
+              (destructuring-bind (element aromaticity)
+                  atom-aromaticity
+                (let* ((isotope
+                        (when isotope-number
+                          (chem::get-isotope element isotope-number)))
+                       (atom (apply #'make-smiles-atom element
+                                   (append
+                                    (when isotope `(:isotope ,isotope))
+                                    (when charge `(:charge ,charge))
+                                    (when aromaticity `(:aromatic ,aromaticity))))))
+                  (when hydrogen-count
+                    (print (list 'hydrogens hydrogen-count)))
+                  atom))))
 
 ;;;
 ;;; Atoms
@@ -93,6 +128,26 @@
   (choices1 (<bracket-atom>)
             (<aliphatic-organic-atom>)
             (<aromatic-organic-atom>)))
+;;;
+;;; Bonds
+(defun <single-bond> () #\-)
+(defun <double-bond> () #\=)
+(defun <triple-bond> () #\#)
+(defun <quadruple-bond> () #\$)
+(defun <aromatic-bond> () #\:)
+(defun <up-bond> () #\/)
+(defun <down-bond> () #\\)
+
+(defun <bond> ()
+  (choices
+   (chook? 1 (<single-bond>))
+   (chook? 2 (<double-bond>))
+   (chook? 3 (<triple-bond>))
+   (chook? 4 (<quadruple-bond>))
+   (chook? :aromatic (<aromatic-bond>))
+   (chook? :up (<up-bond>))
+   (chook? :down (<down-bond>))
+   (result nil)))
 
 (defun collect-ring-tags (atom ring-tags map)
   (if (null ring-tags)
@@ -113,24 +168,35 @@
             (:tip-atom (fset:@ root-atom :tip-atom))
             (:edge-set (fset:set (fset:$ (fset:@ root-atom :edge-set))
                                  (fset:$ (fset:@ branch :edge-set))
-                                 (make-instance 'the-edge
-                                                :source (fset:@ branch :root-atom)
-                                                :dest (fset:@ root-atom :root-atom)
-                                                :kind (fset:@ branch :root-bond))))
+                                 (make-instance 'bond
+                                                :atom1 (fset:@ branch :root-atom)
+                                                :atom2 (fset:@ root-atom :root-atom)
+                                                :order (fset:@ branch :root-bond))))
             (:atom-set (fset:union (fset:@ root-atom :atom-set)
                                    (fset:@ branch :atom-set)))
             (:ring-tags (fset:@ root-atom :ring-tags))))
 
 (defun <branch> (subchain-parser)
   (bracket? #\(
-            (named-seq? (<- bond (choices #\- #\: #\= #\# #\\ #\/ #\$  (result nil)))
+            (named-seq? (<- bond (<bond>))
                         (<- subchain subchain-parser)
                         (fset:map (fset:$ subchain) (:root-bond bond)))
             #\)))
 
+(defun <ring-tag> ()
+  (choice
+   (named-seq? (opt? (<bond>)) 
+               #\%
+               (<- digit1 (as-digit?))
+               (<- digit2 (as-digit?))
+               (+ (* 10 digit1) digit2))
+   (named-seq? (opt? (<bond>))
+               (<- digit1 (as-digit?))
+               digit1)))
+
 (defun <atom-with-branches> (subchain-parser)
   (named-seq? (<- atom (<atom>))
-              (<- ring-tags (many? (digit?)))
+              (<- ring-tags (many? (<ring-tag>)))
               (<- branches (many? (<branch> subchain-parser)))
               (reduce #'branch-merge branches
                       :initial-value (make-root-atom-structure atom ring-tags))))
@@ -140,10 +206,10 @@
         (tags2 (fset:@ atom2 :ring-tags)))
     (let* ((edges (fset:map-intersection tags1 tags2
                                          #'(lambda (source dest)
-                                             (make-instance 'the-edge
-                                                            :source source
-                                                            :dest dest
-                                                            :kind nil))))
+                                             (make-instance 'bond
+                                                            :atom1 source
+                                                            :atom2 dest
+                                                            :order 1))))
            (tags (fset:set-difference (fset:union (fset:domain tags1)
                                                   (fset:domain tags2))
                                       (fset:domain edges))))
@@ -154,7 +220,7 @@
                          (:set tags))))))
 
 (defun <bond-function> ()
-  (named-seq? (<- bond (choices #\- #\: #\= #\# (result nil)))
+  (named-seq? (<- bond (<bond>))
               #'(lambda (atom1 atom2)
                   (multiple-value-bind (new-edges new-ring-tags)
                       (handle-ring-tags atom1 atom2)
@@ -164,10 +230,10 @@
                                (fset:set (fset:$ (fset:@ atom1 :edge-set))
                                          (fset:$ (fset:@ atom2 :edge-set))
                                          (fset:$ new-edges)
-                                         (make-instance 'the-edge
-                                                        :source (fset:@ atom2 :root-atom)
-                                                        :dest (fset:@ atom1 :tip-atom)
-                                                        :kind bond)))
+                                         (make-instance 'bond
+                                                        :atom1 (fset:@ atom2 :root-atom)
+                                                        :atom2 (fset:@ atom1 :tip-atom)
+                                                        :order bond)))
                               (:atom-set (fset:union (fset:@ atom1 :atom-set)
                                                      (fset:@ atom2 :atom-set)))
                               (:ring-tags new-ring-tags))))))
@@ -177,24 +243,80 @@
     (chainl1? (<atom-with-branches> chain)
               (<bond-function>))))
 
+
+(define-condition smiles-parsing-error (error)
+  ((smiles-string
+    :initarg :smiles-string
+    :reader smiles-string))
+  (:report (lambda (condition stream)
+             (format stream "Error parsing SMILES string ~S"
+                     (smiles-string condition)))))
+
+(defun parse-smiles-string (str)
+  (let ((parsed (parse-string* (<chain>) str :complete t)))
+    (if parsed
+      (let ((element-counts (make-hash-table)))
+        (flet ((element-number (atom)
+                 (setf (gethash (element atom) element-counts)
+                       (let ((cur (gethash (element atom) element-counts)))
+                         (if cur (1+ cur) 1)))))
+          (let ((mol (make-instance 'molecule)))
+            (fset:image (lambda (atom)
+                          (add-atom mol atom
+                                    (format nil "~A~A"
+                                            (id (element atom))
+                                            (element-number atom))))
+                        (fset:@ parsed :atom-set))
+            (fset:image (lambda (edge) (epigraph:add-edge mol edge))
+                        (fset:@ parsed :edge-set))
+            ;; further postprocessing needed here:
+            ;; 1. fixup aromatic bonds
+            ;; 2. add implicit hydrogens
+            mol)))
+      (error 'smiles-parsing-error :smiles-string str))))
+
 (defun emit-dot (molecule)
-  (let ((atom-set (fset:@ molecule :atom-set))
-        (edge-set (fset:@ molecule :edge-set))
-        (atom-number-map (fset:empty-map))
+  (let ((atom-number-map (fset:empty-map))
         (counter 0))
-    (fset:do-set (atom atom-set)
-      (setf atom-number-map
+    (loop for atom in (atoms molecule)
+       do (setf atom-number-map
             (fset:with atom-number-map atom (incf counter))))
     (with-output-to-string (str)
       (format str "graph smiles {~&")
-      (fset:do-set (edge edge-set)
-        (format str "\"~a ~a\" -- \"~a ~a\" [label = \"~a\"]~&"
-                (id (element (source-of edge)))
-                (fset:@ atom-number-map (source-of edge))
-                (id (element (dest-of edge)))
-                (fset:@ atom-number-map (dest-of edge))
-                (kind-of edge)))
+      (loop for edge in (chemicl::bonds molecule)
+         do (format str "\"~a ~a\" -- \"~a ~a\" [label = \"~a\"]~&"
+                    (id (element (chemicl::atom1 edge)))
+                    (fset:@ atom-number-map (chemicl::atom1 edge))
+                    (id (element (chemicl::atom2 edge)))
+                    (fset:@ atom-number-map (chemicl::atom2 edge))
+                   (bond-order edge)))
       (format str "}"))))
 
-(defun parse-smiles-string (str)
-  (parse-string* (<chain>) str))
+(defun read-chars-until (stream delimiter)
+  (let ((a (make-array 0 :element-type 'character :adjustable t :fill-pointer 0)))
+    (loop for c = (read-char stream)
+       until (eql c delimiter)
+       do (vector-push-extend c a))
+    a))
+
+;;;
+;;; Reader macro support for molecule literals
+;;;  e.g.: {CC(O)C}
+(defun smiles-reader-error (stream control &rest args)
+  (error 'reader-error
+         :stream stream
+         :format-control control
+         :format-arguments args))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (named-readtables:defreadtable smiles-reader
+    (:merge :standard)
+    (:dispatch-macro-char #\# #\{
+                          #'(lambda (stream char n)
+                              (declare (ignore char n))
+                              (let ((str (read-chars-until stream #\})))
+                                (parse-smiles-string str))))
+    (:macro-char #\} #'(lambda (stream char)
+                         (declare (ignore char))
+                         (smiles-reader-error stream "unmatched curly brace")))))
+
