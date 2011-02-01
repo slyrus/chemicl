@@ -196,10 +196,12 @@
 
 (defun <atom-with-branches> (subchain-parser)
   (named-seq? (<- atom (<atom>))
-              (<- ring-tags (many? (<ring-tag>)))
+              (<- ring-tags1 (many? (<ring-tag>)))
               (<- branches (many? (<branch> subchain-parser)))
+              (<- ring-tags2 (many? (<ring-tag>)))
               (reduce #'branch-merge branches
-                      :initial-value (make-root-atom-structure atom ring-tags))))
+                      :initial-value
+                      (make-root-atom-structure atom (append ring-tags1 ring-tags2)))))
 
 (defun handle-ring-tags (atom1 atom2)
   (let ((tags1 (fset:@ atom1 :ring-tags))
