@@ -64,6 +64,7 @@
            #:map-atoms->list
 
            #:bond
+           #:bonds
            #:bond-order
            #:add-bond
            #:remove-bond
