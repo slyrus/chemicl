@@ -4,6 +4,8 @@
 
 (cl:defpackage #:smiles3
   (:use #:cl #:parser-combinators)
+  (:shadowing-import-from #:cl #:atom)
+  (:shadow #:parse-smiles-string)
   (:import-from #:chemicl
                 #:molecule
                 #:get-element
@@ -23,7 +25,8 @@
   ((aromatic :initarg :aromatic :accessor aromatic :initform nil)
    (explicit-hydrogen-count :initarg :explicit-hydrogen-count
                             :accessor explicit-hydrogen-count
-                            :initform 0)))
+                            :initform 0)
+   (orientation :initarg :orientation :accessor orientation :initform nil)))
 
 (defun make-smiles-atom (element-identifier &rest args)
   (apply #'make-instance
@@ -59,27 +62,28 @@
                      '("b" "c" "n" "o" "s" "p")))))
 
 ;;;
-;;; Bracketed atoms e.g. [Na]
+;;; Bracketed atoms 
+;;; e.g. [H] [Na] [13C] [O-]
+;;; (not yet working: [C@] [C@@]
 (defun <isotope> ()
   (nat?))
 
 (defun <hydrogen-count> ()
-  (opt?
-   (named-seq*
-    #\H
-    (<- num (nat?))
-    (or num 1))))
+  (named-seq?
+   #\H
+   (<- num (opt? (nat?)))
+   (or num 1)))
 
 (defun <charge> ()
-  (choice1 (named-seq*
+  (choice1 (named-seq?
             (char? #\+)
-            (<- charge (opt? (choices1 (named-seq* (char? #\+) 2)
-                                       (nat*))))
+            (<- charge (opt? (choices1 (named-seq? (char? #\+) 2)
+                                       (nat?))))
             (or charge 1))
-           (named-seq*
+           (named-seq?
             (char? #\-)
-            (<- charge (opt? (choices1 (named-seq* (char? #\-) 2)
-                                       (nat*))))
+            (<- charge (opt? (choices1 (named-seq? (char? #\-) 2)
+                                       (nat?))))
             (- (or charge 1)))))
 
 (defun <bracket-aliphatic-atom-symbol> ()
@@ -95,6 +99,18 @@
               #'<aromatic-atom-matcher>
               '("c" "n" "o" "p" "s"))))
 
+(defun <orientation> ()
+  (choices1 (chook? :clockwise "@@")
+            (chook? :counterclockwise "@")))
+
+(defun <bracket-modifier> ()
+  (choices1 (named-seq? (<- hydrogens (<hydrogen-count>))
+                        (list :hydrogen-count hydrogens))
+            (named-seq? (<- charge (<charge>))
+                        (list :charge charge))
+            (named-seq? (<- orientation (<orientation>))
+                        (list :orientation orientation))))
+
 (defun <bracket-atom> ()
   (named-seq? #\[ 
               (<- isotope-number (opt? (nat?)))
@@ -105,22 +121,35 @@
                                     (seq-list?
                                      (<bracket-aromatic-atom-symbol>)
                                      (result t))))
-              (<- hydrogen-count (<hydrogen-count>))
-              (<- charge (opt? (<charge>)))
+              (<- mods (validate?
+                        (many? (<bracket-modifier>))
+                        (lambda (x)
+                          (if (<= (apply #'max
+                                         (map 'list
+                                              #'(lambda (f) (funcall f x :key #'car))
+                                              (map 'list 
+                                                   #'(lambda (y) (alexandria:curry #'count y))
+                                                   '(:hydrogen-count :charge :orientation))))
+                                  1)
+                              t
+                              (error "Bracket modifier appeared more than once!")))))
               #\]
               (destructuring-bind (element aromaticity)
                   atom-aromaticity
-                (let* ((isotope
-                        (when isotope-number
-                          (chem::get-isotope element isotope-number)))
-                       (atom (apply #'make-smiles-atom element
-                                   (append
-                                    (when isotope `(:isotope ,isotope))
-                                    (when charge `(:charge ,charge))
-                                    (when aromaticity `(:aromatic ,aromaticity))))))
-                  (when hydrogen-count
-                    (print (list 'hydrogens hydrogen-count)))
-                  atom))))
+                (destructuring-bind (&key charge hydrogen-count orientation)
+                    (apply #'append mods)
+                  (let* ((isotope
+                          (when isotope-number
+                            (chem::get-isotope element isotope-number)))
+                         (atom (apply #'make-smiles-atom element
+                                      (append
+                                       (when isotope `(:isotope ,isotope))
+                                       (when charge `(:charge ,charge))
+                                       (when aromaticity `(:aromatic ,aromaticity))
+                                       (when hydrogen-count
+                                         `(:explicit-hydrogen-count ,hydrogen-count))
+                                       (when orientation `(:orientation ,orientation))))))
+                    atom)))))
 
 ;;;
 ;;; Atoms
@@ -254,6 +283,12 @@
              (format stream "Error parsing SMILES string ~S"
                      (smiles-string condition)))))
 
+(defun smiles-reader-error (stream control &rest args)
+  (error 'reader-error
+         :stream stream
+         :format-control control
+         :format-arguments args))
+
 (defun parse-smiles-string (str)
   (let ((parsed (parse-string* (<chain>) str :complete t)))
     (if parsed
@@ -304,11 +339,6 @@
 ;;;
 ;;; Reader macro support for molecule literals
 ;;;  e.g.: {CC(O)C}
-(defun smiles-reader-error (stream control &rest args)
-  (error 'reader-error
-         :stream stream
-         :format-control control
-         :format-arguments args))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (named-readtables:defreadtable smiles-reader
@@ -321,4 +351,18 @@
     (:macro-char #\} #'(lambda (stream char)
                          (declare (ignore char))
                          (smiles-reader-error stream "unmatched curly brace")))))
+
+
+;;; We need these to allow the reader macro to work in compiled files (literal atoms)
+(defmethod make-load-form ((self chem:element) &optional environment)
+  (make-load-form-saving-slots self :environment environment))
+
+(defmethod make-load-form ((self chem:isotope) &optional environment)
+  (make-load-form-saving-slots self :environment environment))
+
+(defmethod make-load-form ((self chem:atom) &optional environment)
+  (make-load-form-saving-slots self :environment environment))
+
+(defmethod make-load-form ((self chem:molecule) &optional environment)
+  (make-load-form-saving-slots self :environment environment))
 
