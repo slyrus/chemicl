@@ -35,6 +35,7 @@
   (:shadow #:atom)
   (:nicknames #:chem)
   (:export #:element
+           #:isotope
            #:id
            #:atomic-number
            #:name
@@ -48,7 +49,7 @@
            
            #:get-element
 
-           #+nil #:atom
+           #:atom
            #:make-atom
            #:atom-name
 
