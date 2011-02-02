@@ -36,10 +36,7 @@
    (isotope :initarg :isotope :accessor isotope :initform nil)
    (hybridization :initarg :hybridization
                   :accessor hybridization
-                  :initform nil)
-   (explicit-hydrogen-count :initarg :explicit-hydrogen-count
-                            :accessor explicit-hydrogen-count
-                            :initform 0))
+                  :initform nil))
   (:documentation "A class for representing individual atoms. For
   example, a molecule of hydrogen class would contain two atom
   instances, each of whose element slots would contain the (same)
@@ -136,6 +133,11 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
   atom-identifier is returned."))
 
 (defgeneric add-atom (molecule element-identifier name)
+  (:method ((molecule molecule) (atom atom) name)
+    (setf (atom-name atom) name)
+    (graph:add-node molecule atom)
+    (setf (gethash name (atom-name-hash molecule)) atom)
+    atom)
   (:method ((molecule molecule) element-identifier name)
     (let ((atom (make-atom element-identifier :name name)))
       (graph:add-node molecule atom)
@@ -203,13 +205,13 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
     (number (car (rassoc keyword-or-number *bond-orders*)))))
 
 (defclass bond (graph:edge)
-  ((type :accessor bond-type :initarg :type :initform :single)
+  ((epigraph:node1 :accessor atom1 :initarg :atom1)
+   (epigraph:node2 :accessor atom2 :initarg :atom2)
+   (type :accessor bond-type :initarg :type :initform :single)
    (order :accessor bond-order :initarg :order :initform 1)
    (direction :accessor bond-direction :initarg :direction :initform nil)))
 
 (setf (fdefinition 'bonds) #'graph:edges)
-(setf (fdefinition 'atom1) #'graph:node1)
-(setf (fdefinition 'atom2) #'graph:node2)
 (setf (fdefinition 'map-bonds) #'graph:map-edges)
 (setf (fdefinition 'map-bonds->list) #'graph:map-edges->list)
 
