@@ -3,7 +3,7 @@
  (ql:quickload 'named-readtables))
 
 (cl:defpackage #:smiles3
-  (:use #:cl #:parser-combinators)
+  (:use #:cl #:parser-combinators #:chem)
   (:shadowing-import-from #:cl #:atom)
   (:shadow #:parse-smiles-string)
   (:import-from #:chemicl
@@ -332,6 +332,11 @@
                    (bond-order edge)))
       (format str "}"))))
 
+
+;;;
+;;; Reader macro support for molecule literals
+;;;  e.g.: #M{CC(O)C}
+
 (defun read-chars-until (stream delimiter)
   (let ((a (make-array 0 :element-type 'character :adjustable t :fill-pointer 0)))
     (loop for c = (read-char stream)
@@ -339,32 +344,25 @@
        do (vector-push-extend c a))
     a))
 
-;;;
-;;; Reader macro support for molecule literals
-;;;  e.g.: {CC(O)C}
+(defun whitespace-p (char)
+  (member char '(#\Space #\Newline #\Tab #\Return #\Page)))
+
+(defun read-until-open-bracket (stream)
+  (let ((char (loop for c = (read-char stream)
+                 while (whitespace-p c)
+                 finally (return c))))
+    (unless (eql char #\{)
+      (error "expected open bracket"))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (named-readtables:defreadtable smiles-reader
     (:merge :standard)
-    ;; two alternative reader macros:
-    ;; 1. #M"CC(O)C"
     (:dispatch-macro-char #\# #\M
                           #'(lambda (stream char n)
                               (declare (ignore char n))
-                              (let ((str (read stream)))
-                                (if (stringp str)
-                                    (parse-smiles-string str)
-                                    (error 'smiles-parsing-error :smiles-string str)))))
-    ;; 2. #{CC(O)C}
-    ;; which one do we like better??
-    (:dispatch-macro-char #\# #\{
-                          #'(lambda (stream char n)
-                              (declare (ignore char n))
+                              (read-until-open-bracket stream)
                               (let ((str (read-chars-until stream #\})))
-                                (parse-smiles-string str))))
-    (:macro-char #\} #'(lambda (stream char)
-                         (declare (ignore char))
-                         (smiles-reader-error stream "unmatched curly brace")))))
+                                (parse-smiles-string str))))))
 
 
 ;;; We need these to allow the reader macro to work in compiled files (literal atoms)
@@ -379,4 +377,8 @@
 
 (defmethod make-load-form ((self chem:molecule) &optional environment)
   (make-load-form-saving-slots self :environment environment))
+
+(defmethod make-load-form ((self chem:bond) &optional environment)
+  (make-load-form-saving-slots self :environment environment))
+
 
