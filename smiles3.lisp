@@ -193,17 +193,20 @@
             (:ring-tags (collect-ring-tags root-atom ring-tags (fset:empty-map)))))
 
 (defun branch-merge (root-atom branch)
-  (fset:map (:root-atom (fset:@ root-atom :root-atom))
-            (:tip-atom (fset:@ root-atom :tip-atom))
-            (:edge-set (fset:set (fset:$ (fset:@ root-atom :edge-set))
-                                 (fset:$ (fset:@ branch :edge-set))
-                                 (make-instance 'bond
-                                                :atom1 (fset:@ branch :root-atom)
-                                                :atom2 (fset:@ root-atom :root-atom)
-                                                :order (fset:@ branch :root-bond))))
-            (:atom-set (fset:union (fset:@ root-atom :atom-set)
-                                   (fset:@ branch :atom-set)))
-            (:ring-tags (fset:@ root-atom :ring-tags))))
+  (multiple-value-bind (new-edges new-ring-tags)
+      (handle-ring-tags root-atom branch)
+    (fset:map (:root-atom (fset:@ root-atom :root-atom))
+              (:tip-atom (fset:@ root-atom :tip-atom))
+              (:edge-set (fset:set (fset:$ (fset:@ root-atom :edge-set))
+                                   (fset:$ (fset:@ branch :edge-set))
+                                   (fset:$ new-edges)
+                                   (make-instance 'bond
+                                                  :atom1 (fset:@ root-atom :tip-atom)
+                                                  :atom2 (fset:@ branch :root-atom)
+                                                  :order (fset:@ branch :root-bond))))
+              (:atom-set (fset:union (fset:@ root-atom :atom-set)
+                                     (fset:@ branch :atom-set)))
+              (:ring-tags new-ring-tags))))
 
 (defun <branch> (subchain-parser)
   (bracket? #\(
@@ -262,8 +265,8 @@
                                          (fset:$ (fset:@ atom2 :edge-set))
                                          (fset:$ new-edges)
                                          (make-instance 'bond
-                                                        :atom1 (fset:@ atom2 :root-atom)
-                                                        :atom2 (fset:@ atom1 :tip-atom)
+                                                        :atom1 (fset:@ atom1 :tip-atom)
+                                                        :atom2 (fset:@ atom2 :tip-atom)
                                                         :order bond)))
                               (:atom-set (fset:union (fset:@ atom1 :atom-set)
                                                      (fset:@ atom2 :atom-set)))
@@ -343,6 +346,17 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (named-readtables:defreadtable smiles-reader
     (:merge :standard)
+    ;; two alternative reader macros:
+    ;; 1. #M"CC(O)C"
+    (:dispatch-macro-char #\# #\M
+                          #'(lambda (stream char n)
+                              (declare (ignore char n))
+                              (let ((str (read stream)))
+                                (if (stringp str)
+                                    (parse-smiles-string str)
+                                    (error 'smiles-parsing-error :smiles-string str)))))
+    ;; 2. #{CC(O)C}
+    ;; which one do we like better??
     (:dispatch-macro-char #\# #\{
                           #'(lambda (stream char n)
                               (declare (ignore char n))
