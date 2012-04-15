@@ -22,3 +22,9 @@
             :components ((:static-file "elementdata.xml")
                          (:static-file "isotopes.xml")))))
 
+(cl:defpackage #:chemicl-config
+  (:export #:*base-directory*))
+
+(cl:defparameter chemicl-config::*base-directory*
+  (make-pathname :name nil :type nil :defaults *load-truename*))
+
