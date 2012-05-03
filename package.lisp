@@ -88,5 +88,5 @@
   (merge-pathnames #p"data/elementdata.xml" chemicl-config:*base-directory*))
 
 (defparameter *isotope-data-xml-pathname*
-  (merge-pathnames #p"data/elementdata.xml" chemicl-config:*base-directory*))
+  (merge-pathnames #p"data/isotopes.xml" chemicl-config:*base-directory*))
 
