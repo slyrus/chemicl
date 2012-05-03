@@ -13,7 +13,7 @@
 
    ;; from XML elements
    (radii :initarg :radii :accessor :radii :initform nil)
-   (max-bond-order :initarg :max-bond-order :accessor :max-bond-order)
+   (max-bond-order :initarg :max-bond-order :accessor max-bond-order)
    (mass :initarg :mass :accessor mass)
    (electronegativity :initarg :electronegativity :accessor electronegativity)
 
@@ -103,7 +103,7 @@ mass-number."
                                  :atomic-number (parse-integer-if atomic-number)
                                  :id id
                                  :name name
-                                 :group group
+                                 :group (parse-integer-if group)
                                  :period (parse-integer-if period)
                                  :mass mass
                                  :electronegativity electronegativity
