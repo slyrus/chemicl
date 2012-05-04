@@ -40,10 +40,7 @@
   (:documentation "A class for representing individual atoms. For
   example, a molecule of hydrogen class would contain two atom
   instances, each of whose element slots would contain the (same)
-  element instance for the hydrogen. An atom can be associated with at
-  most one molecule at a time, as sepcified by its molecule slot,
-  which can be NIL, indicating that the atom is not associated with
-  any molecule."))
+  element instance for the hydrogen."))
 
 (defparameter *atom-print-verbosity* 0)
 
