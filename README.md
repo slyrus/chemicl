@@ -12,6 +12,25 @@ The source code for chemicl can be found on
 
 # Examples
 
+## Preliminaries
+
+First, let's make a package for use with chemicl. One potential thing
+to watch out for is that there is an exported symbol in the chemicl
+package which conflicts with a symbol in the common-lisp package:
+atom. One most take care to import the proper symbol. For my packages
+that use chemicl, I usually do a shadowing import from chemicl for the
+atom symbol:
+
+    (asdf:load-system 'chemicl)
+
+    (cl:defpackage #:chemicl-user
+      (:use #:cl #:chemicl)
+      (:shadowing-import-from #:chemicl #:atom))
+
+    (cl:in-package #:chemicl-user)
+
+## A simple example
+
     (defparameter *cyclohexane*
       (let ((mol (make-molecule :name "cyclohexane")))
         (add-atom mol 6 "C1")
