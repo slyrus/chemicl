@@ -13,7 +13,7 @@
 
    ;; from XML elements
    (radii :initarg :radii :accessor :radii :initform nil)
-   (max-bond-order :initarg :max-bond-order :accessor :max-bond-order)
+   (max-bond-order :initarg :max-bond-order :accessor max-bond-order)
    (mass :initarg :mass :accessor mass)
    (electronegativity :initarg :electronegativity :accessor electronegativity)
 
@@ -103,17 +103,14 @@ mass-number."
                                  :atomic-number (parse-integer-if atomic-number)
                                  :id id
                                  :name name
-                                 :group group
+                                 :group (parse-integer-if group)
                                  :period (parse-integer-if period)
                                  :mass mass
                                  :electronegativity electronegativity
                                  :max-bond-order max-bond-order))))
             (xpath:evaluate "/elements/element"
                             (cxml:parse-file 
-                             (asdf:component-pathname
-                              (let ((path '("chemicl" "data" "elementdata.xml")))
-                                (reduce #'asdf:find-component (cdr path)
-                                        :initial-value (asdf:find-system (car path)))))
+                             *element-data-xml-pathname*
                              (stp:make-builder))))))
       (let ((max-element (apply #'max (map 'list #'atomic-number element-list))))
         (let ((array (make-array (1+ max-element) :adjustable nil)))
@@ -149,12 +146,8 @@ mass-number."
                    (xpath:evaluate "isotope" isotope-list-node))
                   #'> :key #'isotope-relative-abundance))))
        (xpath:evaluate "/cml/isotopeList"
-                       (cxml:parse-file 
-                        (asdf:component-pathname
-                         (let ((path '("chemicl" "data" "isotopes.xml")))
-                           (reduce #'asdf:find-component (cdr path)
-                                   :initial-value (asdf:find-system (car path)))))
-                        (stp:make-builder)))))))
+                       (cxml:parse-file *isotope-data-xml-pathname*
+                                        (stp:make-builder)))))))
 (read-element-data)
 (read-isotope-data)
 

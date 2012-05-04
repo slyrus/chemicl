@@ -36,10 +36,7 @@
    (isotope :initarg :isotope :accessor isotope :initform nil)
    (hybridization :initarg :hybridization
                   :accessor hybridization
-                  :initform nil)
-   (explicit-hydrogen-count :initarg :explicit-hydrogen-count
-                            :accessor explicit-hydrogen-count
-                            :initform 0))
+                  :initform nil))
   (:documentation "A class for representing individual atoms. For
   example, a molecule of hydrogen class would contain two atom
   instances, each of whose element slots would contain the (same)
@@ -234,7 +231,7 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
               (bond-order object)
               "Order: unbound"))
   (when (and (slot-boundp object 'direction)
-           (bond-direction object))
+             (bond-direction object))
     (format stream " ~S" (bond-direction object))))
 
 (defgeneric atom-bond-order (molecule atom))
@@ -249,7 +246,7 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
       (atom-bond-order molecule atom))))
 
 (defgeneric add-bond (molecule atom-identifier-1 atom-identifier-2
-                               &key type order direction))
+                      &key type order direction))
 
 (defgeneric find-bond (molecule atom-identifier-1 atom-identifier-2))
 
@@ -298,19 +295,19 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
   (let ((atom1 (graph:node1 bond))
         (atom2 (graph:node2 bond)))
     (let ((atom1-bonds
-           (remove bond (graph:find-edges-containing molecule atom1)))
+            (remove bond (graph:find-edges-containing molecule atom1)))
           (atom2-bonds
-           (remove bond (graph:find-edges-containing molecule atom2))))
+            (remove bond (graph:find-edges-containing molecule atom2))))
       (cons atom1-bonds atom2-bonds))))
 
 (defun remove-keyword-args (keywords list)
   (if (listp keywords)
       (loop for (x y) on list by #'cddr
-         append (unless (member x keywords)
-                  (list x y)))
+            append (unless (member x keywords)
+                     (list x y)))
       (loop for (x y) on list by #'cddr
-         append (unless (eq x keywords)
-                  (list x y)))))
+            append (unless (eq x keywords)
+                     (list x y)))))
 
 (defmethod mass ((molecule molecule))
   (let ((mass 0.0d0))
@@ -337,9 +334,9 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
   (let ((element-count 0)
         (element (get-element element-id)))
     (graph:dfs-map molecule (graph:first-node molecule)
-             (lambda (atom)
-               (when (eq (element atom) element)
-                 (incf element-count))))
+                   (lambda (atom)
+                     (when (eq (element atom) element)
+                       (incf element-count))))
     element-count))
 
 (defun count-elements (molecule)
@@ -376,8 +373,8 @@ symbol containing an element symbol (such as Fe or :fe for Iron)."
   "Uses Huckle's 4n+2 rule to decide if a ring in a molecule is
 aromatic or not."
   (let ((excess-electrons
-         (reduce #'+ (map 'list (lambda (atom) (excess-electrons molecule atom))
-                          ring))))
+          (reduce #'+ (map 'list (lambda (atom) (excess-electrons molecule atom))
+                           ring))))
     (and (> excess-electrons 5)
          (zerop (rem (- excess-electrons 2) 4)))))
 

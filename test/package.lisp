@@ -1,4 +1,5 @@
 
 (cl:defpackage #:chemicl-test
-  (:use #:cl #:chemicl))
+  (:use #:cl #:chemicl)
+  (:shadowing-import-from #:cl #:atom))
 

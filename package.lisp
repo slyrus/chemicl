@@ -77,5 +77,16 @@
            #:molecular-formula
 
            #:parse-smiles-string
-           #:write-smiles-string))
+           #:write-smiles-string
+           
+           #:*element-data-xml-pathname*
+           #:*isotope-data-xml-pathname*))
+
+(in-package #:chemicl)
+
+(defparameter *element-data-xml-pathname*
+  (merge-pathnames #p"data/elementdata.xml" chemicl-config:*base-directory*))
+
+(defparameter *isotope-data-xml-pathname*
+  (merge-pathnames #p"data/isotopes.xml" chemicl-config:*base-directory*))
 

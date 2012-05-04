@@ -23,3 +23,10 @@ visualization and searching, at some point). Currently we don't really
 do anything here.
 
 
+2. New SMILES parser
+
+ - @, @@
+
+ - implicit hydrogens
+ 
+ - double bond configuration

@@ -5,7 +5,11 @@
   :version "0.0.2"
   :licence "BSD"
   :description "A library for representing chemical structures"
-  :depends-on (cxml cxml-stp epigraph)
+  :depends-on (cxml cxml-stp epigraph parser-combinators fset)
+  :in-order-to ((asdf:test-op (asdf:load-op :chemicl-test)))
+  :perform (asdf:test-op :after (op c)
+                         (map nil (intern (symbol-name '#:run!) '#:5am)
+                              '(:chemicl :chemicl-smiles)))
   :components
   ((:cl-source-file "package")
    (:cl-source-file "util" :depends-on (package))
@@ -22,3 +26,18 @@
             :components ((:static-file "elementdata.xml")
                          (:static-file "isotopes.xml")))))
 
+(cl:defpackage #:chemicl-config
+  (:export #:*base-directory*))
+
+(cl:defparameter chemicl-config::*base-directory*
+  (make-pathname :name nil :type nil :defaults *load-truename*))
+
+(asdf:defsystem :chemicl-test
+  :depends-on (fiveam chemicl)
+  :components
+  ((:module
+    :test
+    :components
+    ((:cl-source-file "package")
+     (:cl-source-file "chemicl-test" :depends-on (package))
+     (:cl-source-file "smiles-test" :depends-on (package))))))
