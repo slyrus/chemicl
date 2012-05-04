@@ -55,6 +55,23 @@ symbol:
                        (format nil "H~A" (+ (* (1- i) 2) 2))))
         mol))
 
+## Parsing a SMILES string:
+
+Creating a molecule using the add-atom/add-bond functions as above is
+a bit cumbersone. Another way to do so is to specify the molecule
+using a
+[SMILES](http://en.wikipedia.org/wiki/Simplified_molecular-input_line-entry_system)
+string:
+
+    (defparameter *acetominophen*
+      (chem:parse-smiles-string "CC(=O)NC1=CC=C(C=C1)O"
+                                :name "acetominophen"))
+
+Then we can do things like:
+    
+    CHEMICL-USER> (mass *acetominophen*)
+    151.16255999999993d0
+
 # Dictionary
 
 ## Element
