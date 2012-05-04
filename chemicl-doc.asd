@@ -2,21 +2,19 @@
 (asdf:operate 'asdf:load-op :ch-asdf)
 (asdf:operate 'asdf:load-op :smarkup)
 
-(defpackage #:chemicl-doc-system (:use #:cl #:asdf #:ch-asdf #:smarkup))
+(defpackage #:chemicl-doc-system (:use #:cl #:asdf #:asdf-objects #:smarkup))
 (in-package #:chemicl-doc-system)
-
-#.(smarkup::enable-quote-reader-macro)
 
 (defsystem :chemicl-doc
   :name "chemicl-doc"
   :author "Cyrus Harmon" 
   :version "0.0.1"
-  :depends-on (ch-asdf smarkup)
+  :depends-on (asdf-objects smarkup)
   :components
   ((:module
     "doc"
     :components
-    ((:object-from-file :chemicl-doc-sexp
+    ((:smarkup-object-from-file :chemicl-doc-sexp
                         :pathname #p"chemicl-doc.sexp")
 
      (:filtered-object :chemicl-doc-filtered-sexp
