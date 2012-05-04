@@ -1,8 +1,12 @@
 
 
-(asdf:oos 'asdf:load-op :chemicl)
+(asdf:load-system 'chemicl)
 
-(in-package :chemicl)
+(cl:defpackage #:chemicl-user
+  (:use #:cl #:chemicl)
+  (:shadowing-import-from #:chemicl #:atom))
+
+(cl:in-package #:chemicl-user)
 
 (defun join-xpath-result (result)
   (if (xpath:node-set-p result)
@@ -11,12 +15,8 @@
       (xpath:string-value result)))
 
 (defparameter *element-nodes*
-  (cxml:parse-file 
-   (asdf:component-pathname
-    (let ((path '("chemicl" "data" "elementdata.xml")))
-      (reduce #'asdf:find-component (cdr path)
-              :initial-value (asdf:find-system (car path)))))
-   (stp:make-builder)))
+  (cxml:parse-file *element-data-xml-pathname*
+                   (stp:make-builder)))
 
 (join-xpath-result 
  (xpath:evaluate
@@ -234,10 +234,7 @@
   (with-cml-namespace
     (xpath:evaluate "/cml"
                     (cxml:parse-file 
-                     (asdf:component-pathname
-                      (let ((path '("chemicl" "data" "isotopes.xml")))
-                        (reduce #'asdf:find-component (cdr path)
-                                :initial-value (asdf:find-system (car path)))))
+                     *isotope-data-xml-pathname*
                      (stp:make-builder)))))
 
 (with-cml-namespace
