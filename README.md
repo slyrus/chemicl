@@ -22,18 +22,18 @@ The source code for chemicl can be found on
         (add-atom mol 6 "C6")
 
         (loop for i from 1 to 12
-           do (add-atom mol 1 (format nil "H A" i)))
+           do (add-atom mol 1 (format nil "H~A" i)))
         (loop for i from 1 to 6
            do (add-bond mol
-                        (format nil "C A" (1+ (mod (1- i) 6)))
-                        (format nil "C A" (1+ (mod i 6)))))
+                        (format nil "C~A" (1+ (mod (1- i) 6)))
+                        (format nil "C~A" (1+ (mod i 6)))))
         (loop for i from 1 to 6
            do (add-bond mol
-                        (format nil "C A" i)
-                        (format nil "H A" (1+ (* (1- i) 2))))
+                        (format nil "C~A" i)
+                        (format nil "H~A" (1+ (* (1- i) 2))))
              (add-bond mol
-                       (format nil "C A" i)
-                       (format nil "H A" (+ (* (1- i) 2) 2))))
+                       (format nil "C~A" i)
+                       (format nil "H~A" (+ (* (1- i) 2) 2))))
         mol))
 
 # Dictionary
