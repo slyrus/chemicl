@@ -62,6 +62,7 @@
            #:atoms
            #:map-atoms
            #:map-atoms->list
+           #:atom-count
 
            #:bond
            #:bonds
