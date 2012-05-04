@@ -14,12 +14,12 @@ The source code for chemicl can be found on
 
 ## Preliminaries
 
-First, let's make a package for use with chemicl. One potential thing
-to watch out for is that there is an exported symbol in the chemicl
-package which conflicts with a symbol in the common-lisp package:
-atom. One most take care to import the proper symbol. For my packages
-that use chemicl, I usually do a shadowing import from chemicl for the
-atom symbol:
+First, let's make a package for use with chemicl. One thing to watch
+out for is that there is an exported symbol in the chemicl package
+which conflicts with a symbol in the common-lisp package: atom. One
+most take care to import the proper symbol. For my packages that use
+chemicl, I usually do a shadowing import from chemicl for the atom
+symbol:
 
     (asdf:load-system 'chemicl)
 
