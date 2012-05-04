@@ -73,7 +73,7 @@ atom symbol:
 
        ;; from XML elements
        (radii :initarg :radii :accessor :radii :initform nil)
-       (max-bond-order :initarg :max-bond-order :accessor :max-bond-order)
+       (max-bond-order :initarg :max-bond-order :accessor max-bond-order)
        (mass :initarg :mass :accessor mass)
        (electronegativity :initarg :electronegativity :accessor electronegativity)
 
