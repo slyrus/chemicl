@@ -17,9 +17,9 @@
    (:cl-source-file "chemicl" :depends-on (package util elements))
    (:cl-source-file "rings" :depends-on (package elements chemicl))
    (:cl-source-file "primes" :depends-on (package elements chemicl))
-   (:cl-source-file "smiles" :depends-on (package elements chemicl primes))
+   (:cl-source-file "canonicalize" :depends-on (package elements chemicl primes))
+   (:cl-source-file "smiles" :depends-on (package elements chemicl primes canonicalize))
    (:static-file "COPYRIGHT")
-   
    (:static-file "README")
    (:static-file "make-dist" :pathname #.(make-pathname :name "make-dist" :type "sh"))
    (:module "data"
