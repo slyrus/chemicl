@@ -1,7 +1,4 @@
 
-(cl:eval-when (:compile-toplevel :load-toplevel :execute)
- (ql:quickload 'named-readtables))
-
 (cl:defpackage #:smiles3
   (:use #:cl #:parser-combinators #:chem)
   (:shadowing-import-from #:cl #:atom)
