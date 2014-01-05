@@ -535,7 +535,6 @@ using the key "
   (remove-atoms-from-list "H" list))
 
 (defun write-smiles-string-to-stream (molecule stream &key)
-  (declare (optimize (debug 2)))
   (destructuring-bind (ranks atoms)
       (canonicalize-atoms molecule)
     (let ((visited-atoms (make-hash-table))
