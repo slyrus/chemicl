@@ -25,7 +25,7 @@
   ((aromatic :initarg :aromatic :accessor aromatic :initform nil)
    (explicit-hydrogen-count :initarg :explicit-hydrogen-count
                             :accessor explicit-hydrogen-count
-                            :initform 0)
+                            :initform nil)
    (orientation :initarg :orientation :accessor orientation :initform nil)))
 
 (defun make-smiles-atom (element-identifier &rest args)
