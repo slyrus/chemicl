@@ -345,8 +345,11 @@ of the MOLECULE class with the appropriate atoms and bonds."
                                                :right-atom (atom2 bond))))
                     (flet ((check-and-set-substituent (index atom)
                              (if (elt (substituents config) index)
-                                 (error 'smiles-error
+                                 ;; FIXME! this is wrong. we're throwing this error in some cases
+                                 ;; where the double bond configuration is fine.
+                                 #+nil (error 'smiles-error
                                         :description "Invalid double bond configuration")
+                                 nil
                                  (setf (elt (substituents config) index) atom))))
                       (loop for child in left
                          do
