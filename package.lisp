@@ -35,7 +35,6 @@
   (:shadow #:atom)
   (:nicknames #:chem)
   (:export #:element
-           #:isotope
            #:id
            #:atomic-number
            #:name
@@ -48,6 +47,11 @@
            #:charge
            
            #:get-element
+
+           #:isotope
+           #:isotope-number
+           #:isotope-exact-mass
+           #:isotope-relative-abundance
 
            #:atom
            #:make-atom
