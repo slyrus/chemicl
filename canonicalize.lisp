@@ -145,7 +145,7 @@ using the key "
      atoms)))
 
 (defun canonicalize-atoms (molecule)
-  (loop  for (ranks atoms) = (canonicalize-atoms-1 molecule atoms ranks)
+  (loop for (ranks atoms) = (canonicalize-atoms-1 molecule atoms ranks)
      for dup = (find-duplicate ranks)
      while dup
      do (let ((pos (position dup ranks)))
